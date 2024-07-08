@@ -47,7 +47,8 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   });
 
   /// The builder for this widget.
-  final Widget Function(BuildContext context, T store, Map<Type, DataActionStatus> statuses)
+  final Widget Function(
+          BuildContext context, T store, Map<Type, DataActionStatus> statuses)
       builder;
 
   /// A builder function that returns a widget to display
@@ -101,7 +102,8 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       );
       eventSub = stream.listen((e) {
         final status = e.status;
-        widget.actionNotifier![e.runtimeType]?.call(context, e.store as T, status);
+        widget.actionNotifier![e.runtimeType]
+            ?.call(context, e.store as T, status);
       });
     }
   }
@@ -124,12 +126,14 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
           final action = snapshot.data as DataAction;
           _statuses[action.runtimeType] = action.status;
 
-          if (_statuses.values.any((status) => status == DataActionStatus.loading)) {
+          if (_statuses.values
+              .any((status) => status == DataActionStatus.loading)) {
             if (!widget.useDefaultWidgets && widget.loadingBuilder != null) {
               return widget.loadingBuilder!(context);
             }
             return const Center(child: CircularProgressIndicator.adaptive());
-          } else if (_statuses.values.any((status) => status == DataActionStatus.error)) {
+          } else if (_statuses.values
+              .any((status) => status == DataActionStatus.error)) {
             final error = action.error ?? 'An error occurred';
             if (!widget.useDefaultWidgets && widget.errorBuilder != null) {
               return widget.errorBuilder!(context, error);
