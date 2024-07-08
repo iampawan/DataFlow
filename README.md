@@ -44,7 +44,7 @@ To start using DataFlow in your Flutter project, follow these steps:
 
 ```dart
 dependencies:
-  dataflow: ^1.0.0
+  dataflow: ^1.0.1
 ```
 
 2. Import the package in your Dart code:
@@ -306,7 +306,7 @@ Here are some best practices to follow when using DataFlow:
 This project is licensed under the MIT License.
 ----
 
-This comparison provides an overview of how DataFlow stacks up against other popular state management libraries for Flutter. For more detailed information and advanced usage, please refer to the official documentation.
+The above comparison table provides an overview of how DataFlow stacks up against other popular state management libraries for Flutter. For more detailed information and advanced usage, please refer to the official documentation.
 ## Conclusion
 
 DataFlow provides a powerful and flexible way to manage the state and data flow in your Flutter applications. By defining actions, using a centralized store, and leveraging widgets like DataSync and DataSyncNotifier, you can create reactive and responsive UIs with ease.
