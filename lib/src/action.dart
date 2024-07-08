@@ -49,9 +49,10 @@ abstract class DataAction<T extends DataStore> {
     }
 
     try {
-      _setStatus(DataActionStatus.loading);
-      await Future.delayed(Duration.zero);
       dynamic result = execute();
+      _status = DataActionStatus.loading;
+      await Future.delayed(Duration.zero);
+      DataFlow.notify(this);
       if (result is Future) {
         result = await result;
       }
@@ -63,7 +64,6 @@ abstract class DataAction<T extends DataStore> {
         }
       }
       _setStatus(DataActionStatus.success);
-      DataFlow.notify(this);
 
       for (final dataAction in _postDataActions) {
         dataAction();
