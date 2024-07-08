@@ -1,5 +1,5 @@
 name: dataflow
-description: "A new Flutter package project."
+description: "A reactive state management library for Flutter"
 version: 1.0.0
 homepage: https://learn.codepur.dev/dataflow
 documentation: https://learn.codepur.dev/dataflow
