@@ -44,7 +44,7 @@ To start using DataFlow in your Flutter project, follow these steps:
 
 ```dart
 dependencies:
-  dataflow: ^1.0.1
+  dataflow: ^1.0.2
 ```
 
 2. Import the package in your Dart code:
