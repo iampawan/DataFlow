@@ -68,7 +68,8 @@ abstract class DataStore {
 class DataFlow {
   DataFlow._();
 
-  static final _controller = StreamController<DataAction<DataStore>>.broadcast(sync: true);
+  static final _controller =
+      StreamController<DataAction<DataStore>>.broadcast(sync: true);
   static final _middlewares = <DataMiddleware>[];
 
   /// The store/storage for this engine.
@@ -91,7 +92,8 @@ class DataFlow {
   /// Gets the store of the given type.
   static T getStore<T extends DataStore>() {
     if (_store == null) {
-      throw StateError('DataFlow store not initialized. Call DataFlow.init() before using.');
+      throw StateError(
+          'DataFlow store not initialized. Call DataFlow.init() before using.');
     }
     return _store! as T;
   }
