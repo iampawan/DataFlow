@@ -23,11 +23,9 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(title: const Text('Login and Todo App')),
         body: DataSync<AppStore>(
           builder: (context, store, statuses) {
-            if (statuses.values
-                .any((status) => status == DataActionStatus.error)) {
+            if (statuses.values.any((status) => status == DataActionStatus.error)) {
               return const Center(child: Text('An error occurred'));
-            } else if (statuses.values
-                .any((status) => status == DataActionStatus.loading)) {
+            } else if (statuses.values.any((status) => status == DataActionStatus.loading)) {
               return const Center(child: CircularProgressIndicator());
             }
             return store.isLoggedIn ? TodoScreen() : LoginScreen();
