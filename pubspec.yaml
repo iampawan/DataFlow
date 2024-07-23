@@ -1,13 +1,12 @@
 name: dataflow
 description: "A reactive state management library for Flutter with a simple and intuitive API which allows you to build Flutter applications with ease."
-version: 1.0.2
+version: 1.0.3
 homepage: https://learn.codepur.dev/dataflow
 documentation: https://learn.codepur.dev/dataflow
 repository: https://github.com/iampawan/DataFlow
 
-
 environment:
-  sdk: '>=3.4.3 <4.0.0'
+  sdk: ">=3.4.3 <4.0.0"
   flutter: ">=1.17.0"
 
 dependencies:

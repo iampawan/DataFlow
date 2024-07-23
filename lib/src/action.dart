@@ -43,17 +43,17 @@ abstract class DataAction<T extends DataStore> {
 
   Future<void> _run() async {
     for (final i in DataFlow._middlewares) {
-      if (!await i.preDataAction(this)) {
+      if (!i.preDataAction(this)) {
         return;
       }
     }
 
     try {
       dynamic result = execute();
-      _status = DataActionStatus.loading;
-      await Future.delayed(Duration.zero);
-      DataFlow.notify(this);
       if (result is Future) {
+        _status = DataActionStatus.loading;
+        await Future.delayed(Duration.zero);
+        DataFlow.notify(this);
         result = await result;
       }
 
@@ -63,12 +63,13 @@ abstract class DataAction<T extends DataStore> {
           await out;
         }
       }
+
       _setStatus(DataActionStatus.success);
 
       for (final dataAction in _postDataActions) {
         dataAction();
       }
-    } catch (e, s) {
+    } on Exception catch (e, s) {
       onException(e, s);
     }
 
@@ -109,9 +110,9 @@ mixin DataChain<T> {
 /// An abstract class representing a DataMiddleware.
 abstract class DataMiddleware {
   /// A function that is called before the execution of a DataAction.
-  Future<bool> preDataAction(DataAction dataAction);
+  bool preDataAction(DataAction dataAction);
 
   /// A function that is called after the execution of a DataAction.
 
-  Future<void> postDataAction(DataAction dataAction);
+  void postDataAction(DataAction dataAction);
 }

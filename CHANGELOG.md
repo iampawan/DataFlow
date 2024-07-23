@@ -1,3 +1,7 @@
-## 1.0.2
+## 1.0.3 (2024-07-23)
 
-* First Release
+- Bug Fixes
+
+## 1.0.2 (2024-07-08)
+
+- First Release

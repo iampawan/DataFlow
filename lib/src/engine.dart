@@ -77,6 +77,13 @@ class DataFlow {
   /// The events of this engine.
   static Stream<DataAction<DataStore>> get events => _controller.stream;
 
+  /// Filters the main event stream with the action
+  /// given as parameter. This can be used to perform some callbacks inside
+  /// widgets after some action executed.
+  static Stream<DataAction> streamOf(Type action) {
+    return _controller.stream.where((e) => e.runtimeType == action);
+  }
+
   /// Initializes the engine with the given store and middlewares.
   static void init<T extends DataStore>(
     T store, {

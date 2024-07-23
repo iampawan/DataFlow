@@ -1,4 +1,6 @@
 // add_todo_action.dart
+import 'dart:async';
+
 import 'package:dataflow/dataflow.dart';
 import 'package:example/store.dart';
 
@@ -17,6 +19,8 @@ class AddTodoAction extends DataAction<AppStore> {
 class LoginAction extends DataAction<AppStore> {
   final String username;
   final String password;
+  final Completer comp = Completer();
+  bool caught = false;
 
   LoginAction(this.username, this.password);
 
@@ -26,8 +30,16 @@ class LoginAction extends DataAction<AppStore> {
     await Future.delayed(const Duration(seconds: 1));
     if (username == 'user' && password == 'password') {
       store.isLoggedIn = true;
+      comp.complete();
     } else {
+      comp.complete();
       throw Exception('Invalid credentials');
     }
+  }
+
+  @override
+  void onException(e, StackTrace s) {
+    caught = true;
+    super.onException(e, s);
   }
 }
