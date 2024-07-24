@@ -48,8 +48,10 @@ class DataSync<T extends DataStore> extends StatefulWidget {
 
   /// The builder for this widget.
   final Widget Function(
-          BuildContext context, T store, Map<Type, DataActionStatus> statuses)
-      builder;
+    BuildContext context,
+    T store,
+    Map<Type, DataActionStatus> statuses,
+  ) builder;
 
   /// A builder function that returns a widget to display
   /// when the state is loading.

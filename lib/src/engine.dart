@@ -100,7 +100,8 @@ class DataFlow {
   static T getStore<T extends DataStore>() {
     if (_store == null) {
       throw StateError(
-          'DataFlow store not initialized. Call DataFlow.init() before using.');
+        'DataFlow store not initialized. Call DataFlow.init() before using.',
+      );
     }
     return _store! as T;
   }
