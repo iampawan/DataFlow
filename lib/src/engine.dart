@@ -68,8 +68,7 @@ abstract class DataStore {
 class DataFlow {
   DataFlow._();
 
-  static final _controller =
-      StreamController<DataAction<DataStore>>.broadcast(sync: true);
+  static final _controller = StreamController<DataAction<DataStore>>.broadcast(sync: true);
   static final _middlewares = <DataMiddleware>[];
 
   /// The store/storage for this engine.
