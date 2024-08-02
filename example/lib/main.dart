@@ -22,10 +22,11 @@ class MyApp extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(title: const Text('Login and Todo App')),
         body: DataSync<AppStore>(
+          useDefaultWidgets: true,
+          disableErrorBuilder: true,
           builder: (context, store, statuses) {
-            if (statuses.values.any((status) => status == DataActionStatus.error)) {
-              return const Center(child: Text('An error occurred'));
-            } else if (statuses.values.any((status) => status == DataActionStatus.loading)) {
+            if (statuses.values
+                .any((status) => status == DataActionStatus.loading)) {
               return const Center(child: CircularProgressIndicator());
             }
             return store.isLoggedIn ? TodoScreen() : LoginScreen();

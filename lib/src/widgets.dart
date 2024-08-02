@@ -25,13 +25,15 @@ import 'package:flutter/material.dart';
 ///   builder: (context, tank) {
 ///     //= Build UI based on tank and status
 ///   },
-/// loadingBuilder: (context) {
-///   return Center(child: CircularProgressIndicator());
-/// },
-/// errorBuilder: (context, error) {
-///   return Center(child: Text('An error occurred: $error'));
-/// },
-/// useDefaultWidgets: true,
+///   loadingBuilder: (context) {
+///     return Center(child: CircularProgressIndicator());
+///   },
+///   errorBuilder: (context, error) {
+///     return Center(child: Text('An error occurred: $error'));
+///   },
+///   useDefaultWidgets: true,
+///   disableErrorBuilder: false,
+///   disableLoadingBuilder: false,
 /// )
 /// ```
 class DataSync<T extends DataStore> extends StatefulWidget {
@@ -43,6 +45,8 @@ class DataSync<T extends DataStore> extends StatefulWidget {
     this.errorBuilder,
     this.actionNotifier,
     this.useDefaultWidgets = false,
+    this.disableErrorBuilder = false,
+    this.disableLoadingBuilder = false,
     super.key,
   });
 
@@ -75,7 +79,7 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   final Widget Function(BuildContext context, String error)? errorBuilder;
 
   /// A map of [DataAction] actions to be notified.
-  final Map<Type, ContextCallbackWithStatus<T>>? actionNotifier;
+  final Map<Type, ContextCallbackWithStatus>? actionNotifier;
 
   /// The actions to listen to.
   final Set<Type>? actions;
@@ -84,6 +88,12 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   /// Defaults to false.
   /// If set to true, the default loading and error widgets will be used.
   final bool useDefaultWidgets;
+
+  /// Whether to disable the error builder.
+  final bool disableErrorBuilder;
+
+  /// Whether to disable the loading builder.
+  final bool disableLoadingBuilder;
 
   @override
   // ignore: library_private_types_in_public_api
@@ -104,7 +114,7 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       );
       eventSub = stream.listen((e) {
         final status = e.status;
-        widget.actionNotifier![e.runtimeType]?.call(context, e.store as T, status);
+        widget.actionNotifier![e.runtimeType]?.call(context, e, status);
       });
     }
   }
@@ -126,15 +136,20 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
         if (snapshot.hasData) {
           final action = snapshot.data as DataAction;
           _statuses[action.runtimeType] = action.status;
-
-          if (_statuses.values.any((status) => status == DataActionStatus.loading)) {
-            if (!widget.useDefaultWidgets && widget.loadingBuilder != null) {
+          if (_statuses.values
+                  .any((status) => status == DataActionStatus.loading) &&
+              widget.useDefaultWidgets &&
+              !widget.disableLoadingBuilder) {
+            if (widget.loadingBuilder != null) {
               return widget.loadingBuilder!(context);
             }
-            return const Center(child: CircularProgressIndicator.adaptive());
-          } else if (_statuses.values.any((status) => status == DataActionStatus.error)) {
+            return Center(child: CircularProgressIndicator.adaptive());
+          } else if (_statuses.values
+                  .any((status) => status == DataActionStatus.error) &&
+              widget.useDefaultWidgets &&
+              !widget.disableErrorBuilder) {
             final error = action.error ?? 'An error occurred';
-            if (!widget.useDefaultWidgets && widget.errorBuilder != null) {
+            if (widget.errorBuilder != null) {
               return widget.errorBuilder!(context, error);
             }
             return Center(child: Text(error));
@@ -149,16 +164,10 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
 }
 
 /// A function that is called when a [DataAction] action occurs.
-typedef ContextCallbackWithStatus<T> = void Function(
-  BuildContext context,
-  T store,
-  DataActionStatus status,
-);
-
-/// A function that is called when a [DataAction] action occurs.
-typedef ContextCallback = void Function(
+typedef ContextCallbackWithStatus = void Function(
   BuildContext context,
   DataAction action,
+  DataActionStatus status,
 );
 
 /// A widget that notifies listeners when specific [DataAction] actions occur.
@@ -201,7 +210,7 @@ class _DataSyncNotifierState extends State<DataSyncNotifier> {
     );
     eventSub = stream.listen((e) {
       final status = e.status;
-      widget.actions[e.runtimeType]?.call(context, e.store, status);
+      widget.actions[e.runtimeType]?.call(context, e, status);
     });
   }
 
