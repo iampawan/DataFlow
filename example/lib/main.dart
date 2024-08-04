@@ -24,6 +24,17 @@ class MyApp extends StatelessWidget {
         body: DataSync<AppStore>(
           useDefaultWidgets: true,
           disableErrorBuilder: true,
+          actionNotifier: {
+            LoginAction: (context, action, status) {
+              if (status == DataActionStatus.error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(action.error),
+                  ),
+                );
+              }
+            },
+          },
           builder: (context, store, statuses) {
             if (statuses.values
                 .any((status) => status == DataActionStatus.loading)) {

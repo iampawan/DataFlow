@@ -33,13 +33,14 @@ class LoginAction extends DataAction<AppStore> {
       comp.complete();
     } else {
       comp.complete();
-      throw Exception('Invalid credentials');
+      throw DataException('Invalid credentials');
     }
   }
 
   @override
   void onException(e, StackTrace s) {
+    error = 'Custom error $e';
     caught = true;
-    super.onException(e, s);
+    super.onException(error + s.toString(), s);
   }
 }

@@ -25,11 +25,14 @@ abstract class DataAction<T extends DataStore> {
   /// flow execution.
   DataAction() {
     _status = DataActionStatus.idle;
+    _invokeTrace = StackTrace.current;
     _run();
   }
 
+  late StackTrace _invokeTrace;
+
   /// The error message associated with the DataAction.
-  String? error;
+  String error = '';
 
   /// The DataStore associated with this DataAction.
   T get store => DataFlow.getStore<T>();
@@ -70,7 +73,9 @@ abstract class DataAction<T extends DataStore> {
         dataAction();
       }
     } on Exception catch (e, s) {
+      error = '$e';
       onException(e, s);
+      _setStatus(DataActionStatus.error);
     }
 
     for (final i in DataFlow._middlewares) {
@@ -90,8 +95,14 @@ abstract class DataAction<T extends DataStore> {
 
   /// Handles the exception that occurs during the execution of the DataAction.
   void onException(dynamic e, StackTrace s) {
-    error = '$e\n$s';
-    _setStatus(DataActionStatus.error);
+    var isAssertOn = false;
+    assert(isAssertOn = true);
+    if (isAssertOn) {
+      dev.log(
+        '${e.toString()}',
+        name: '$runtimeType',
+      );
+    }
   }
 
   void _setStatus(DataActionStatus status) {
@@ -115,4 +126,13 @@ abstract class DataMiddleware {
   /// A function that is called after the execution of a DataAction.
 
   void postDataAction(DataAction dataAction);
+}
+
+class DataException implements Exception {
+  DataException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

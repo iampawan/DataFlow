@@ -1,4 +1,4 @@
-## 1.1.0 (2024-08-02)
+## 1.1.1 (2024-08-05)
 
 - Added disableErrorBuilder and disableLoadingBuilder props
 - actionNotifier now gives an action
