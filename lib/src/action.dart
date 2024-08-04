@@ -25,11 +25,8 @@ abstract class DataAction<T extends DataStore> {
   /// flow execution.
   DataAction() {
     _status = DataActionStatus.idle;
-    _invokeTrace = StackTrace.current;
     _run();
   }
-
-  late StackTrace _invokeTrace;
 
   /// The error message associated with the DataAction.
   String error = '';
