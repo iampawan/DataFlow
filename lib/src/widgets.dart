@@ -148,11 +148,10 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
                   .any((status) => status == DataActionStatus.error) &&
               widget.useDefaultWidgets &&
               !widget.disableErrorBuilder) {
-            final error = action.error ?? 'An error occurred';
             if (widget.errorBuilder != null) {
-              return widget.errorBuilder!(context, error);
+              return widget.errorBuilder!(context, action.error);
             }
-            return Center(child: Text(error));
+            return Center(child: Text(action.error));
           }
         }
 
