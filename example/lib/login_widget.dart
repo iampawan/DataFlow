@@ -1,6 +1,9 @@
+import 'package:dataflow/dataflow.dart';
+import 'package:example/store.dart';
 import 'package:flutter/material.dart';
 
 import 'actions.dart';
+import 'todo_widget.dart';
 
 class LoginScreen extends StatelessWidget {
   final usernameController = TextEditingController();
@@ -25,12 +28,36 @@ class LoginScreen extends StatelessWidget {
               decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
-            ElevatedButton(
-              onPressed: () {
-                LoginAction(usernameController.text, passwordController.text);
-              },
-              child: const Text('Login'),
-            ),
+            const SizedBox(height: 36),
+            DataSync<AppStore>(
+                useDefaultWidgets: true,
+                disableErrorBuilder: true,
+                actions: const {LoginAction},
+                actionNotifier: {
+                  LoginAction: (context, action, status) {
+                    if (status == DataActionStatus.error) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(action.error),
+                        ),
+                      );
+                    } else if (status == DataActionStatus.success) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => TodoScreen()),
+                      );
+                    }
+                  }
+                },
+                builder: (context, store, hasData) {
+                  return ElevatedButton(
+                    onPressed: () {
+                      LoginAction(
+                          usernameController.text, passwordController.text);
+                    },
+                    child: const Text('Login'),
+                  );
+                }),
           ],
         ),
       ),

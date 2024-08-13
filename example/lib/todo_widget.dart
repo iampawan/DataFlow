@@ -15,14 +15,25 @@ class TodoScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Todo List')),
       body: DataSync<AppStore>(
         builder: (context, store, hasData) {
-          return ListView.builder(
-            itemCount: store.todos.length,
-            itemBuilder: (context, index) {
-              return ListTile(title: Text(store.todos[index]));
-            },
-          );
+          if (hasData && store.todos.isNotEmpty) {
+            return ListView.builder(
+              itemCount: store.todos.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(store.todos[index]),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      RemoveTodoAction(index);
+                    },
+                  ),
+                );
+              },
+            );
+          }
+          return const Center(child: Text('No todos'));
         },
-        actions: const {AddTodoAction},
+        actions: const {AddTodoAction, RemoveTodoAction},
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -35,6 +46,7 @@ class TodoScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     AddTodoAction(todoController.text);
+                    todoController.clear();
                     Navigator.pop(context);
                   },
                   child: const Text('Add'),

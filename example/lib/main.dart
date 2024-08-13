@@ -3,7 +3,6 @@ import 'package:dataflow/dataflow.dart';
 import 'package:example/store.dart';
 import 'package:flutter/material.dart';
 
-import 'actions.dart';
 import 'login_widget.dart';
 import 'todo_widget.dart';
 
@@ -18,28 +17,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final store = DataFlow.getStore<AppStore>();
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Login and Todo App')),
-        body: DataSync<AppStore>(
-          useDefaultWidgets: true,
-          actionNotifier: {
-            LoginAction: (context, action, status) {
-              if (status == DataActionStatus.error) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(action.error),
-                  ),
-                );
-              }
-            },
-          },
-          builder: (context, store, hasData) {
-            return store.isLoggedIn ? TodoScreen() : LoginScreen();
-          },
-          actions: const {LoginAction},
-        ),
-      ),
+      home: store.isLoggedIn ? TodoScreen() : LoginScreen(),
     );
   }
 }

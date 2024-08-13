@@ -15,6 +15,17 @@ class AddTodoAction extends DataAction<AppStore> {
   }
 }
 
+class RemoveTodoAction extends DataAction<AppStore> {
+  final int index;
+
+  RemoveTodoAction(this.index);
+
+  @override
+  Future<void> execute() async {
+    store.todos.removeAt(index);
+  }
+}
+
 // login_action.dart
 class LoginAction extends DataAction<AppStore> {
   final String username;
