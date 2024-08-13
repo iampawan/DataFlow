@@ -29,7 +29,7 @@ abstract class DataAction<T extends DataStore> {
   }
 
   /// The error message associated with the DataAction.
-  String error = 'An error occurred';
+  String error = '';
 
   /// The DataStore associated with this DataAction.
   T get store => DataFlow.getStore<T>();
@@ -51,20 +51,17 @@ abstract class DataAction<T extends DataStore> {
     try {
       dynamic result = execute();
       if (result is Future) {
-        _status = DataActionStatus.loading;
-        await Future.delayed(Duration.zero);
-        DataFlow.notify(this);
+        _setStatus(DataActionStatus.loading);
         result = await result;
       }
-
+      _setStatus(DataActionStatus.success);
       if (result != null && this is DataChain) {
         final dynamic out = (this as DataChain).fork(result);
         if (out is Future) {
           await out;
         }
+        _setStatus(DataActionStatus.success);
       }
-
-      _setStatus(DataActionStatus.success);
 
       for (final dataAction in _postDataActions) {
         dataAction();
@@ -104,7 +101,6 @@ abstract class DataAction<T extends DataStore> {
 
   void _setStatus(DataActionStatus status) {
     _status = status;
-    DataFlow.getStore().setStatus(runtimeType, status);
     DataFlow.notify(this);
   }
 }
@@ -125,8 +121,8 @@ abstract class DataMiddleware {
   void postDataAction(DataAction dataAction);
 }
 
-class DataException implements Exception {
-  DataException(this.message);
+class DataFlowException implements Exception {
+  DataFlowException(this.message);
 
   final String message;
 

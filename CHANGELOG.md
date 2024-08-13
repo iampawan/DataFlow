@@ -1,3 +1,12 @@
+## 1.2.0 (2024-08-13)
+
+### Breaking change (Data Sync builder now gives hasData in place of statues)
+
+- context.dataSync() gives access to action bases status
+- context.getStore() gives access to store
+- DataFlowException added to handle data flow errors
+- Bug Fixes
+
 ## 1.1.1 (2024-08-05)
 
 - Added disableErrorBuilder and disableLoadingBuilder props

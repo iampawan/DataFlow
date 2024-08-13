@@ -10,23 +10,21 @@ void main() {
     });
 
     test('status is success after execute completes', () async {
-      final flow = FetchUsersAction();
-      await flow.execute();
+      final action = FetchUsersAction();
       await Future.delayed(
         const Duration(seconds: 2),
       ); // Wait for execute to complete.
-      expect(flow.status, equals(DataActionStatus.success));
+      expect(action.status, equals(DataActionStatus.success));
     });
   });
 
-  group('RushEngine', () {
+  group('DataFlow ', () {
     test('store is initially null', () {
       expect(DataFlow.getStore(), isA<MyStore>());
     });
 
-    test('fuel is updated after a flow is executed', () async {
-      final flow = FetchUsersAction();
-      await flow.execute();
+    test('action is updated after a flow is executed', () async {
+      FetchUsersAction();
       await Future.delayed(
         const Duration(seconds: 2),
       ); // Wait for execute to complete.

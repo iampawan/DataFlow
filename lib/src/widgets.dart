@@ -54,7 +54,8 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   final Widget Function(
     BuildContext context,
     T store,
-    Map<Type, DataActionStatus> statuses,
+    // ignore: avoid_positional_boolean_parameters
+    bool hasData,
   ) builder;
 
   /// A builder function that returns a widget to display
@@ -97,12 +98,49 @@ class DataSync<T extends DataStore> extends StatefulWidget {
 
   @override
   // ignore: library_private_types_in_public_api
-  _DataSyncState createState() => _DataSyncState<T>();
+  DataSyncState createState() => DataSyncState<T>();
 }
 
-class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
+class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   StreamSubscription<DataAction>? eventSub;
-  final Map<Type, DataActionStatus> _statuses = {};
+  final Map<Type, DataActionStatus> allActionsStatus = {};
+
+  /// Gets the status of the given action type.
+  DataActionStatus getStatus(Type actionType) {
+    return allActionsStatus[actionType] ?? DataActionStatus.idle;
+  }
+
+  /// If any actions is loading
+  bool get isAnyActionLoading =>
+      allActionsStatus.values.any((e) => e == DataActionStatus.loading);
+
+  /// Which action is loading
+  Type? get whichActionIsLoading {
+    for (final entry in allActionsStatus.entries) {
+      if (entry.value == DataActionStatus.loading) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  /// if any action has an error
+  bool get hasAnyActionError =>
+      allActionsStatus.values.any((e) => e == DataActionStatus.error);
+
+  /// Which action has an error
+  Type? get whichActionHasError {
+    for (final entry in allActionsStatus.entries) {
+      if (entry.value == DataActionStatus.error) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  /// if all actions are successful
+  bool get areAllActionsSuccessful =>
+      allActionsStatus.values.every((e) => e == DataActionStatus.success);
 
   @override
   void initState() {
@@ -121,6 +159,7 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
 
   @override
   void dispose() {
+    allActionsStatus.clear();
     eventSub?.cancel();
     super.dispose();
   }
@@ -134,29 +173,28 @@ class _DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       stream: stream,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final action = snapshot.data as DataAction;
-          _statuses[action.runtimeType] = action.status;
-          if (_statuses.values
-                  .any((status) => status == DataActionStatus.loading) &&
+          allActionsStatus[snapshot.data!.runtimeType] = snapshot.data!.status;
+          if (isAnyActionLoading &&
               widget.useDefaultWidgets &&
               !widget.disableLoadingBuilder) {
             if (widget.loadingBuilder != null) {
               return widget.loadingBuilder!(context);
             }
             return Center(child: CircularProgressIndicator.adaptive());
-          } else if (_statuses.values
-                  .any((status) => status == DataActionStatus.error) &&
+          } else if (hasAnyActionError &&
               widget.useDefaultWidgets &&
               !widget.disableErrorBuilder) {
             if (widget.errorBuilder != null) {
-              return widget.errorBuilder!(context, action.error);
+              return widget.errorBuilder!(context, snapshot.data!.error);
             }
-            return Center(child: Text(action.error));
+            return Center(child: Text(snapshot.data!.error));
           }
-        }
 
-        final store = DataFlow.getStore() as T;
-        return widget.builder(context, store, _statuses);
+          final store = DataFlow.getStore() as T;
+          return widget.builder(context, store, true);
+        } else {
+          return widget.builder(context, DataFlow.getStore() as T, false);
+        }
       },
     );
   }
@@ -222,5 +260,17 @@ class _DataSyncNotifierState extends State<DataSyncNotifier> {
   @override
   Widget build(BuildContext context) {
     return widget.child ?? const SizedBox();
+  }
+}
+
+extension DataFlowContextExtension on BuildContext {
+  /// Gets the access to state class of DataSync.
+  DataSyncState<T> dataSync<T extends DataStore>() {
+    return findAncestorStateOfType<DataSyncState<T>>()!;
+  }
+
+  /// Gets the store of the current [DataFlow].
+  T getStore<T extends DataStore>() {
+    return DataFlow.getStore<T>();
   }
 }

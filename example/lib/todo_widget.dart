@@ -14,7 +14,7 @@ class TodoScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Todo List')),
       body: DataSync<AppStore>(
-        builder: (context, store, status) {
+        builder: (context, store, hasData) {
           return ListView.builder(
             itemCount: store.todos.length,
             itemBuilder: (context, index) {

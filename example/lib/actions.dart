@@ -33,7 +33,7 @@ class LoginAction extends DataAction<AppStore> {
       comp.complete();
     } else {
       comp.complete();
-      throw DataException('Invalid credentials');
+      throw DataFlowException('Invalid credentials');
     }
   }
 
@@ -42,5 +42,12 @@ class LoginAction extends DataAction<AppStore> {
     error = 'Custom error $e';
     caught = true;
     super.onException(error + s.toString(), s);
+  }
+}
+
+class DummyAction extends DataAction<AppStore> {
+  @override
+  execute() async {
+    await Future.delayed(const Duration(seconds: 2));
   }
 }

@@ -15,6 +15,8 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 
+import 'package:rxdart/subjects.dart';
+
 part 'action.dart';
 
 /// An enum representing the status of a DataAction.
@@ -53,24 +55,13 @@ enum DataActionStatus {
 }
 
 /// An abstract class representing a DataStore.
-abstract class DataStore {
-  final Map<Type, DataActionStatus> _actionStatuses = {};
-
-  DataActionStatus getStatus(Type actionType) {
-    return _actionStatuses[actionType] ?? DataActionStatus.idle;
-  }
-
-  void setStatus(Type actionType, DataActionStatus status) {
-    _actionStatuses[actionType] = status;
-  }
-}
+abstract class DataStore {}
 
 /// A class representing a DataFlow.
 class DataFlow {
   DataFlow._();
 
-  static final _controller =
-      StreamController<DataAction<DataStore>>.broadcast(sync: true);
+  static final _controller = BehaviorSubject<DataAction<DataStore>>(sync: true);
   static final _middlewares = <DataMiddleware>[];
 
   /// The store/storage for this engine.
