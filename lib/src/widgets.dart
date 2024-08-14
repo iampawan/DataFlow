@@ -139,9 +139,23 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
     return null;
   }
 
+  // if any action is successful
+  bool get isAnyActionSuccessful =>
+      allActionsStatus.values.any((e) => e == DataActionStatus.success);
+
   /// if all actions are successful
   bool get areAllActionsSuccessful =>
       allActionsStatus.values.every((e) => e == DataActionStatus.success);
+
+  /// which action is successful
+  Type? get whichActionIsSuccessful {
+    for (final entry in allActionsStatus.entries) {
+      if (entry.value == DataActionStatus.success) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
 
   @override
   void initState() {
