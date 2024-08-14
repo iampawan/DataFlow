@@ -61,7 +61,7 @@ abstract class DataStore {}
 class DataFlow {
   DataFlow._();
 
-  static final _controller = BehaviorSubject<DataAction<DataStore>>(sync: true);
+  static final _controller = BehaviorSubject<DataAction<DataStore>>();
   static final _middlewares = <DataMiddleware>[];
 
   /// The store/storage for this engine.
