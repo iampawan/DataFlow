@@ -102,7 +102,8 @@ class DataSync<T extends DataStore> extends StatefulWidget {
 }
 
 class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
-  StreamSubscription<DataAction>? eventSub;
+  StreamSubscription<DataAction>? eventSubAct;
+  StreamSubscription<DataAction>? eventSubNot;
   final Map<Type, DataActionStatus> allActionsStatus = {};
 
   /// Gets the status of the given action type.
@@ -145,12 +146,22 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   @override
   void initState() {
     super.initState();
+    if (widget.actions != null) {
+      final actions = widget.actions!.toSet();
+      final stream = DataFlow.events.where(
+        (e) => actions.contains(e.runtimeType),
+      );
+      eventSubAct = stream.listen((e) {
+        final status = e.status;
+        allActionsStatus[e.runtimeType] = status;
+      });
+    }
     if (widget.actionNotifier != null) {
       final actions = widget.actionNotifier!.keys.toSet();
       final stream = DataFlow.events.where(
         (e) => actions.contains(e.runtimeType),
       );
-      eventSub = stream.listen((e) {
+      eventSubNot = stream.listen((e) {
         final status = e.status;
         widget.actionNotifier![e.runtimeType]?.call(context, e, status);
       });
@@ -160,7 +171,8 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   @override
   void dispose() {
     allActionsStatus.clear();
-    eventSub?.cancel();
+    eventSubAct?.cancel();
+    eventSubNot?.cancel();
     super.dispose();
   }
 
@@ -173,7 +185,6 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       stream: stream,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          allActionsStatus[snapshot.data!.runtimeType] = snapshot.data!.status;
           if (isAnyActionLoading &&
               widget.useDefaultWidgets &&
               !widget.disableLoadingBuilder) {
