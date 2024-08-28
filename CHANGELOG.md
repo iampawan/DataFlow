@@ -1,3 +1,7 @@
+## 1.3.0 (2024-08-28)
+
+### Breaking change (Data Sync builder syntax changed)
+
 ## 1.2.2 (2024-08-14)
 
 ### Breaking change (Data Sync builder now gives hasData in place of statues)

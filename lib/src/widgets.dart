@@ -70,7 +70,7 @@ class DataSync<T extends DataStore> extends StatefulWidget {
     BuildContext context,
     T store,
     // ignore: avoid_positional_boolean_parameters
-    bool hasData,
+    bool hasActionExecuted,
   ) builder;
 
   /// A custom builder function for the loading state widget.
