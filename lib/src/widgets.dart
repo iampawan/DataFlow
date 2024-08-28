@@ -25,15 +25,15 @@ import 'package:flutter/material.dart';
 ///   builder: (context, tank) {
 ///     //= Build UI based on tank and status
 ///   },
-///   loadingBuilder: (context) {
+///   customLoadingBuilder: (context) {
 ///     return Center(child: CircularProgressIndicator());
 ///   },
-///   errorBuilder: (context, error) {
+///   customErrorBuilder: (context, error) {
 ///     return Center(child: Text('An error occurred: $error'));
 ///   },
-///   useDefaultWidgets: true,
-///   disableErrorBuilder: false,
-///   disableLoadingBuilder: false,
+///   enableDefaultWidgets: true,
+///   disableDefaultErrorWidget: false,
+///   disableDefaultLoadingWidget: false,
 /// )
 /// ```
 class DataSync<T extends DataStore> extends StatefulWidget {
@@ -41,16 +41,31 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   const DataSync({
     required this.builder,
     required this.actions,
-    this.loadingBuilder,
-    this.errorBuilder,
+    this.customLoadingBuilder,
+    this.customErrorBuilder,
     this.actionNotifier,
-    this.useDefaultWidgets = false,
-    this.disableErrorBuilder = false,
-    this.disableLoadingBuilder = false,
+    this.enableDefaultWidgets = false,
+    this.disableDefaultErrorWidget = false,
+    this.disableDefaultLoadingWidget = false,
     super.key,
-  });
+  })  : assert(
+          !(customLoadingBuilder != null && !enableDefaultWidgets),
+          'customLoadingBuilder cannot be used unless enableDefaultWidgets is set to true.',
+        ),
+        assert(
+          !(customErrorBuilder != null && !enableDefaultWidgets),
+          'customErrorBuilder cannot be used unless enableDefaultWidgets is set to true.',
+        ),
+        assert(
+          !(disableDefaultErrorWidget && !enableDefaultWidgets),
+          'disableDefaultErrorWidget cannot be used unless enableDefaultWidgets is set to true.',
+        ),
+        assert(
+          !(disableDefaultLoadingWidget && !enableDefaultWidgets),
+          'disableDefaultLoadingWidget cannot be used unless enableDefaultWidgets is set to true.',
+        );
 
-  /// The builder for this widget.
+  /// The widget builder for rendering data.
   final Widget Function(
     BuildContext context,
     T store,
@@ -58,26 +73,26 @@ class DataSync<T extends DataStore> extends StatefulWidget {
     bool hasData,
   ) builder;
 
-  /// A builder function that returns a widget to display
-  /// when the state is loading.
+  /// A custom builder function for the loading state widget.
+  /// If `enableDefaultWidgets` is true, this will override the default loading widget.
   ///
   /// Example:
   /// ```dart
-  /// loadingBuilder: (context) {
+  /// customLoadingBuilder: (context) {
   ///   return Center(child: CircularProgressIndicator());
   /// },
   /// ```
-  final Widget Function(BuildContext context)? loadingBuilder;
+  final Widget Function(BuildContext context)? customLoadingBuilder;
 
-  /// A builder function that returns a widget to display when an error occurs.
-  ///
+  /// A custom builder function for the error state widget.
+  /// If `enableDefaultWidgets` is true, this will override the default error widget.
   /// Example:
   /// ```dart
-  /// errorBuilder: (context, error) {
+  /// customErrorBuilder: (context, error) {
   ///   return Center(child: Text('An error occurred: $error'));
   /// },
   /// ```
-  final Widget Function(BuildContext context, String error)? errorBuilder;
+  final Widget Function(BuildContext context, String error)? customErrorBuilder;
 
   /// A map of [DataAction] actions to be notified.
   final Map<Type, ContextCallbackWithStatus>? actionNotifier;
@@ -85,16 +100,18 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   /// The actions to listen to.
   final Set<Type>? actions;
 
-  /// Whether to use the default loading and error widgets.
+  /// Whether to enable default loading and error widgets.
+  /// If true, default widgets will be used unless overridden by custom builders.
   /// Defaults to false.
-  /// If set to true, the default loading and error widgets will be used.
-  final bool useDefaultWidgets;
+  final bool enableDefaultWidgets;
 
-  /// Whether to disable the error builder.
-  final bool disableErrorBuilder;
+  /// Whether to disable the default error widget.
+  /// Only applicable if `enableDefaultWidgets` is true and no custom error builder is provided.
+  final bool disableDefaultErrorWidget;
 
-  /// Whether to disable the loading builder.
-  final bool disableLoadingBuilder;
+  /// Whether to disable the default loading widget.
+  /// Only applicable if `enableDefaultWidgets` is true and no custom loading builder is provided.
+  final bool disableDefaultLoadingWidget;
 
   @override
   // ignore: library_private_types_in_public_api
@@ -200,17 +217,17 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           if (isAnyActionLoading &&
-              widget.useDefaultWidgets &&
-              !widget.disableLoadingBuilder) {
-            if (widget.loadingBuilder != null) {
-              return widget.loadingBuilder!(context);
+              widget.enableDefaultWidgets &&
+              !widget.disableDefaultLoadingWidget) {
+            if (widget.customLoadingBuilder != null) {
+              return widget.customLoadingBuilder!(context);
             }
             return Center(child: CircularProgressIndicator.adaptive());
           } else if (hasAnyActionError &&
-              widget.useDefaultWidgets &&
-              !widget.disableErrorBuilder) {
-            if (widget.errorBuilder != null) {
-              return widget.errorBuilder!(context, snapshot.data!.error);
+              widget.enableDefaultWidgets &&
+              !widget.disableDefaultErrorWidget) {
+            if (widget.customErrorBuilder != null) {
+              return widget.customErrorBuilder!(context, snapshot.data!.error);
             }
             return Center(child: Text(snapshot.data!.error));
           }

@@ -30,8 +30,8 @@ class LoginScreen extends StatelessWidget {
             ),
             const SizedBox(height: 36),
             DataSync<AppStore>(
-                useDefaultWidgets: true,
-                disableErrorBuilder: true,
+                enableDefaultWidgets: true,
+                disableDefaultErrorWidget: true,
                 actions: const {LoginAction},
                 actionNotifier: {
                   LoginAction: (context, action, status) {
@@ -49,7 +49,7 @@ class LoginScreen extends StatelessWidget {
                     }
                   }
                 },
-                builder: (context, store, hasData) {
+                builder: (context, store, _) {
                   return ElevatedButton(
                     onPressed: () {
                       LoginAction(
