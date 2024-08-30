@@ -93,7 +93,7 @@ abstract class DataAction<T extends DataStore> {
     assert(isAssertOn = true);
     if (isAssertOn) {
       dev.log(
-        '${e.toString()}',
+        e.toString(),
         name: '$runtimeType',
       );
     }

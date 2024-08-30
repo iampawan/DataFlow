@@ -220,7 +220,7 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
             if (widget.customLoadingBuilder != null) {
               return widget.customLoadingBuilder!(context);
             }
-            return Center(child: CircularProgressIndicator.adaptive());
+            return const Center(child: CircularProgressIndicator.adaptive());
           } else if (hasAnyActionError &&
               widget.enableDefaultWidgets &&
               !widget.disableDefaultErrorWidget) {
