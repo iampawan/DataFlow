@@ -49,11 +49,10 @@ class LoginScreen extends StatelessWidget {
                     }
                   }
                 },
-                builder: (context, store, _) {
+                builder: (context, store, hasData) {
                   return ElevatedButton(
                     onPressed: () {
-                      LoginAction(
-                          usernameController.text, passwordController.text);
+                      LoginAction(usernameController.text, passwordController.text);
                     },
                     child: const Text('Login'),
                   );

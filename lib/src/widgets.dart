@@ -65,7 +65,7 @@ class DataSync<T extends DataStore> extends StatefulWidget {
           'disableDefaultLoadingWidget cannot be used unless enableDefaultWidgets is set to true.',
         );
 
-  /// The widget builder for rendering data.
+  /// The builder for this widget.
   final Widget Function(
     BuildContext context,
     T store,
@@ -129,8 +129,7 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   }
 
   /// If any actions is loading
-  bool get isAnyActionLoading =>
-      allActionsStatus.values.any((e) => e == DataActionStatus.loading);
+  bool get isAnyActionLoading => allActionsStatus.values.any((e) => e == DataActionStatus.loading);
 
   /// Which action is loading
   Type? get whichActionIsLoading {
@@ -143,8 +142,7 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   }
 
   /// if any action has an error
-  bool get hasAnyActionError =>
-      allActionsStatus.values.any((e) => e == DataActionStatus.error);
+  bool get hasAnyActionError => allActionsStatus.values.any((e) => e == DataActionStatus.error);
 
   /// Which action has an error
   Type? get whichActionHasError {
