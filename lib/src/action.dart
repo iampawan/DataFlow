@@ -29,7 +29,7 @@ abstract class DataAction<T extends DataStore> {
   }
 
   /// The error message associated with the DataAction.
-  String error = '';
+  Exception? error;
 
   /// The DataStore associated with this DataAction.
   T get store => DataFlow.getStore<T>();
@@ -67,7 +67,7 @@ abstract class DataAction<T extends DataStore> {
         dataAction();
       }
     } on Exception catch (e, s) {
-      error = '$e';
+      error = e;
       onException(e, s);
       _setStatus(DataActionStatus.error);
     }

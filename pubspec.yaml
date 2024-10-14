@@ -1,7 +1,7 @@
 name: dataflow
 description: "A reactive state management library for Flutter with a simple and
   intuitive API which allows you to build Flutter applications with ease."
-version: 1.2.2
+version: 1.4.0
 homepage: https://learn.codepur.dev/dataflow
 documentation: https://learn.codepur.dev/dataflow
 repository: https://github.com/iampawan/DataFlow
@@ -22,7 +22,7 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
-flutter: null
+flutter: {}
 # To add assets to your package, add an assets section, like this:
 # assets:
 #   - images/a_dot_burr.jpeg

@@ -30,15 +30,14 @@ class LoginScreen extends StatelessWidget {
             ),
             const SizedBox(height: 36),
             DataSync<AppStore>(
-                enableDefaultWidgets: true,
-                disableDefaultErrorWidget: true,
+                disableErrorBuilder: true,
                 actions: const {LoginAction},
                 actionNotifier: {
                   LoginAction: (context, action, status) {
                     if (status == DataActionStatus.error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(action.error),
+                          content: Text(action.error.toString()),
                         ),
                       );
                     } else if (status == DataActionStatus.success) {
@@ -52,7 +51,8 @@ class LoginScreen extends StatelessWidget {
                 builder: (context, store, hasData) {
                   return ElevatedButton(
                     onPressed: () {
-                      LoginAction(usernameController.text, passwordController.text);
+                      LoginAction(
+                          usernameController.text, passwordController.text);
                     },
                     child: const Text('Login'),
                   );
