@@ -30,6 +30,11 @@
   - [Action Chaining](#action-chaining)
   - [Action Cancellation](#action-cancellation)
   - [DataFlow Reset](#dataflow-reset)
+- [DataFlow Inspector](#dataflow-inspector)
+  - [Actions Panel](#actions-panel)
+  - [Time Travel Debugging](#time-travel-debugging)
+  - [Insights](#insights)
+  - [Retry/Replay Actions](#retryreplay-actions)
 - [Comparison with Other Libraries](#comparison-with-other-libraries)
 - [API Reference](#api-reference)
 - [Best Practices](#best-practices)
@@ -59,7 +64,7 @@ DataFlow was designed with these principles in mind:
 
 ```yaml
 dependencies:
-  dataflow: ^2.0.0-beta.2
+  dataflow: ^2.0.0-beta.4
 ```
 
 ### Step 2: Create Your Store
@@ -855,6 +860,98 @@ if (DataFlow.isDisposed) {
 
 ---
 
+## DataFlow Inspector
+
+DataFlow Inspector is a powerful visual debugging tool that helps you understand and debug your application's state management.
+
+### Setup
+
+Wrap your `MaterialApp` with `DataFlowInspector`:
+
+```dart
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return DataFlowInspector(
+      enabled: true, // Set to false or use kReleaseMode in production
+      child: MaterialApp(
+        home: HomeScreen(),
+      ),
+    );
+  }
+}
+```
+
+### Actions Panel
+
+The Actions Panel shows all dispatched actions in real-time:
+
+- **Status indicators**: Loading (spinner), Success (✓), Error (✗), Cancelled (⊘)
+- **Duration**: How long each action took
+- **Filter**: Filter actions by type
+- **Error details**: See error messages for failed actions
+
+### Time Travel Debugging
+
+Step through your app's state history:
+
+- **State snapshots**: Captured after each action completes
+- **Slider navigation**: Scrub through state timeline
+- **State diff**: See exactly how state changed
+- **Jump to any point**: Click any snapshot to view that state
+
+### Insights
+
+Automatic detection of potential issues:
+
+- **Slow Actions**: Actions taking >5 seconds
+- **Rapid-Fire Calls**: Same action called multiple times quickly (may need debouncing)
+- **Repeated Failures**: Action failing multiple times in a row
+- **Excessive Rebuilds**: Widgets rebuilding too frequently
+
+### Retry/Replay Actions
+
+Re-run actions directly from the inspector:
+
+1. Add the `Retryable` mixin to your action:
+
+```dart
+class LoadPostsAction extends DataAction<AppStore> with Retryable<AppStore> {
+  final bool refresh;
+
+  LoadPostsAction({this.refresh = false});
+
+  @override
+  DataAction<AppStore> retry() => LoadPostsAction(refresh: refresh);
+
+  @override
+  Future<void> execute() async {
+    // Your implementation
+  }
+}
+```
+
+2. Failed actions show a **Retry** button (red)
+3. Successful actions show a **Replay** button (cyan)
+
+### Bug Report
+
+Capture a comprehensive bug report:
+
+- Screenshot of current screen
+- Current store state
+- Action history with timestamps
+- Device information
+
+### Inspector Controls
+
+- **Floating button** (bottom-right): Toggle inspector panels
+- **Actions panel**: Tap header to expand/collapse
+- **Time Travel panel**: Use slider to navigate history
+- **Insights badge**: Shows count of detected issues
+
+---
+
 ## Comparison with Other Libraries
 
 | Feature | DataFlow | Bloc | Provider | Riverpod | GetX |
@@ -868,7 +965,7 @@ if (DataFlow.isDisposed) {
 | **Middleware** | Yes | Yes | No | No | No |
 | **Action Chaining** | Yes | No | No | No | No |
 | **Cancellation** | Yes (v2.0+) | Yes | No | Yes | No |
-| **DevTools** | Planned | Yes | Yes | Yes | No |
+| **Visual Debugger** | Yes (Inspector) | Yes | Yes | Yes | No |
 
 ### When to Use DataFlow
 

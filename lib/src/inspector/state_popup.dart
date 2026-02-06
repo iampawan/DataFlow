@@ -453,14 +453,8 @@ class StatePopup extends StatelessWidget {
     };
 
     Clipboard.setData(ClipboardData(text: jsonEncode(data)));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('State copied to clipboard'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    // Note: SnackBar feedback removed since inspector is above MaterialApp
+    // The copy still works - data is in clipboard
   }
 
   String _shortenActionName(String name) {

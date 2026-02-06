@@ -355,6 +355,43 @@ class _ActionTile extends StatelessWidget {
                 ],
               ),
             ),
+            // Retry/Replay button for completed actions
+            if (action.canRetry) ...[
+              GestureDetector(
+                onTap: () => action.doRetry(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: action.status == DataActionStatus.error
+                        ? theme.errorColor
+                        : theme.primaryColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        action.status == DataActionStatus.error
+                            ? Icons.refresh
+                            : Icons.replay,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        action.status == DataActionStatus.error ? 'Retry' : 'Replay',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [

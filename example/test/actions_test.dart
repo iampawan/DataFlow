@@ -4,18 +4,20 @@ import 'package:dataflow/dataflow.dart';
 import 'package:example/actions.dart';
 import 'package:example/store.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 
-class MockAppStore extends Mock implements AppStore {}
+// Test-specific actions for basic DataFlow testing
+class TestStore extends DataStore {
+  int count = 0;
+}
 
-class Increment extends DataAction<AppStore> {
+class Increment extends DataAction<TestStore> {
   @override
   void execute() {
     store.count++;
   }
 }
 
-class IncrementLaterAction extends DataAction<AppStore> {
+class IncrementLaterAction extends DataAction<TestStore> {
   @override
   void execute() {
     next(() => Increment());
@@ -53,7 +55,7 @@ class ActionCounter extends DataMiddleware {
   }
 }
 
-class AsyncIncrementAction extends DataAction<AppStore> {
+class AsyncIncrementAction extends DataAction<TestStore> {
   final Completer comp = Completer();
 
   @override
@@ -64,7 +66,7 @@ class AsyncIncrementAction extends DataAction<AppStore> {
   }
 }
 
-class ExceptionAction extends DataAction<AppStore> {
+class ExceptionAction extends DataAction<TestStore> {
   bool caught = false;
 
   @override
@@ -79,13 +81,13 @@ class ExceptionAction extends DataAction<AppStore> {
 }
 
 void main() {
-  group("Basic actions", () {
+  group("Basic actions with TestStore", () {
     setUp(() {
-      DataFlow.init(AppStore());
+      DataFlow.init(TestStore());
     });
 
     test('incrementing count', () {
-      final store = DataFlow.getStore<AppStore>();
+      final store = DataFlow.getStore<TestStore>();
       expect(store.count, 0);
       Increment();
       expect(store.count, 1);
@@ -109,13 +111,13 @@ void main() {
     });
 
     test('lazy execution', () async {
-      final store = DataFlow.getStore<AppStore>();
+      final store = DataFlow.getStore<TestStore>();
       IncrementLaterAction();
       expect(store.count, 2);
     });
 
     test('async execution', () async {
-      final store = DataFlow.getStore<AppStore>();
+      final store = DataFlow.getStore<TestStore>();
 
       final mut = AsyncIncrementAction();
       expect(store.count, 0);
@@ -125,7 +127,7 @@ void main() {
 
     test('interceptor execution', () async {
       final actCount = ActionCounter();
-      DataFlow.init(AppStore(), middlewares: [actCount]);
+      DataFlow.init(TestStore(), middlewares: [actCount]);
       expect(actCount.finished, 0);
       Increment();
       expect(actCount.finished, 1);
@@ -133,7 +135,7 @@ void main() {
 
     test('interceptor rejection', () async {
       final actReject = ActionRejector();
-      final store = AppStore();
+      final store = TestStore();
       DataFlow.init(store, middlewares: [actReject]);
       expect(actReject.rejected, 0);
       expect(store.count, 0);
@@ -142,32 +144,159 @@ void main() {
       expect(store.count, 0);
     });
   });
-  group('AddTodoAction', () {
+
+  group('AppStore LoginAction', () {
     setUp(() {
       DataFlow.init(AppStore());
     });
 
-    test('adds todo to the list', () {
-      AddTodoAction('Test Todo');
-      expect(DataFlow.getStore<AppStore>().todos, contains('Test Todo'));
+    test('successful login sets currentUser', () async {
+      final store = DataFlow.getStore<AppStore>();
+      expect(store.currentUser, isNull);
+      expect(store.isAuthenticating, false);
+
+      LoginAction(email: 'test@example.com', password: 'password123');
+
+      // Wait for async operation to complete
+      await Future.delayed(const Duration(milliseconds: 2100));
+
+      expect(store.currentUser, isNotNull);
+      expect(store.currentUser!.email, 'test@example.com');
+      expect(store.isAuthenticating, false);
+    });
+
+    test('login with empty email fails', () async {
+      final store = DataFlow.getStore<AppStore>();
+
+      LoginAction(email: '', password: 'password123');
+
+      // Wait for async operation to complete
+      await Future.delayed(const Duration(milliseconds: 2100));
+
+      expect(store.currentUser, isNull);
+      expect(store.authError, isNotNull);
+      expect(store.authError, 'Email and password required');
+    });
+
+    test('login with short password fails', () async {
+      final store = DataFlow.getStore<AppStore>();
+
+      LoginAction(email: 'test@example.com', password: '123');
+
+      // Wait for async operation to complete
+      await Future.delayed(const Duration(milliseconds: 2100));
+
+      expect(store.currentUser, isNull);
+      expect(store.authError, 'Password must be at least 6 characters');
     });
   });
 
-  group('LoginAction', () {
+  group('AppStore LogoutAction', () {
+    setUp(() async {
+      DataFlow.init(AppStore());
+      // First login
+      LoginAction(email: 'test@example.com', password: 'password123');
+      await Future.delayed(const Duration(milliseconds: 2100));
+    });
+
+    test('logout clears currentUser', () async {
+      final store = DataFlow.getStore<AppStore>();
+      expect(store.currentUser, isNotNull);
+
+      LogoutAction();
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      expect(store.currentUser, isNull);
+      expect(store.posts, isEmpty);
+      expect(store.notifications, isEmpty);
+    });
+  });
+
+  group('AppStore ChangeTabAction', () {
     setUp(() {
       DataFlow.init(AppStore());
     });
 
-    test('successful login', () async {
-      final action = LoginAction('user', 'password');
-      await action.comp.future;
-      expect(DataFlow.getStore<AppStore>().isLoggedIn, true);
+    test('changes selected tab', () async {
+      final store = DataFlow.getStore<AppStore>();
+      expect(store.selectedTabIndex, 0);
+
+      ChangeTabAction(index: 2);
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      expect(store.selectedTabIndex, 2);
+    });
+  });
+
+  group('AppStore SearchPostsAction', () {
+    setUp(() async {
+      DataFlow.init(AppStore());
+      // Load some posts first
+      LoadPostsAction(refresh: true);
+      await Future.delayed(const Duration(milliseconds: 1200));
     });
 
-    test('failed login', () async {
-      final action = LoginAction('wrong', 'wrong');
-      await action.comp.future;
-      expectLater(action.caught, true);
+    test('searches posts by title', () async {
+      final store = DataFlow.getStore<AppStore>();
+      // Posts should be loaded
+      expect(store.posts.isNotEmpty, true);
+
+      SearchPostsAction(query: 'Flutter');
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      expect(store.searchQuery, 'Flutter');
+      // Some posts contain "Flutter" in title
+      expect(store.searchResults, isNotEmpty);
+    });
+
+    test('empty query clears search results', () async {
+      final store = DataFlow.getStore<AppStore>();
+
+      SearchPostsAction(query: '');
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      expect(store.searchQuery, '');
+      expect(store.searchResults, isEmpty);
+      expect(store.isSearching, false);
+    });
+  });
+
+  group('AppStore UpdateSettingsAction', () {
+    setUp(() async {
+      DataFlow.init(AppStore());
+      // First login
+      LoginAction(email: 'test@example.com', password: 'password123');
+      await Future.delayed(const Duration(milliseconds: 2100));
+    });
+
+    test('updates dark mode setting', () async {
+      final store = DataFlow.getStore<AppStore>();
+      expect(store.currentUser!.settings.darkMode, false);
+
+      UpdateSettingsAction(darkMode: true);
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      expect(store.currentUser!.settings.darkMode, true);
+    });
+
+    test('updates notification setting', () async {
+      final store = DataFlow.getStore<AppStore>();
+      expect(store.currentUser!.settings.notifications, true);
+
+      UpdateSettingsAction(notifications: false);
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      expect(store.currentUser!.settings.notifications, false);
+    });
+
+    test('updates language setting', () async {
+      final store = DataFlow.getStore<AppStore>();
+      expect(store.currentUser!.settings.language, 'en');
+
+      UpdateSettingsAction(language: 'es');
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      expect(store.currentUser!.settings.language, 'es');
     });
   });
 }

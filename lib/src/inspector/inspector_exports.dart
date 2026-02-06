@@ -45,3 +45,4 @@ export 'insights_panel.dart' show InsightsPanel, InsightsBadge;
 export 'bug_report.dart' show BugReport, BugReportCapture, showBugReportDialog;
 export 'pulse_effect.dart' show PulseEffect, GlowingBorder, PulseEffectExtension;
 export 'state_popup.dart' show StatePopup, showStatePopup;
+export 'time_travel.dart' show TimeTravelPanel;

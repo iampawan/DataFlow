@@ -1,3 +1,61 @@
+## 2.0.0-beta.4 (2025-02-06)
+
+### New Features - DataFlow Inspector 🔍
+
+A powerful visual debugging tool for DataFlow applications.
+
+- **Actions Panel** - Real-time view of all dispatched actions with status (loading/success/error/cancelled)
+- **Time Travel Debugging** - Step through state snapshots captured after each action completes
+- **Insights Panel** - Automatic detection of:
+  - Slow actions (>5s)
+  - Rapid-fire action calls (potential debounce needed)
+  - Repeated failures
+  - Excessive widget rebuilds
+- **Retry/Replay Actions** - Re-run failed or successful actions directly from inspector
+- **Bug Report Capture** - Screenshot + state + action history export
+- **State Popup** - Tap any DataSync widget to inspect its state and subscribed actions
+
+### New APIs
+
+- `DataFlowInspector` widget - Wrap your `MaterialApp` to enable visual debugging
+- `Retryable<T>` mixin - Add to actions to enable retry/replay from inspector
+- `RetryableAction` interface - Non-generic base for runtime type checking
+
+### Inspector Usage
+
+```dart
+DataFlowInspector(
+  enabled: true, // Disable in production
+  child: MaterialApp(...),
+)
+```
+
+### Retryable Actions
+
+```dart
+class LoadDataAction extends DataAction<AppStore> with Retryable<AppStore> {
+  @override
+  DataAction<AppStore> retry() => LoadDataAction();
+
+  @override
+  Future<void> execute() async { ... }
+}
+```
+
+### Bug Fixes
+
+- Fixed action tracking for concurrent actions of same type
+- Fixed duplicate loading entries when `DataFlow.notify()` called multiple times
+- Fixed `SelectableText` overlay error in inspector (replaced with `Text`)
+- Fixed `ScaffoldMessenger` not found error in bug report dialog
+
+### Documentation
+
+- Added `DATAFLOW.md` - Comprehensive LLM context file for Claude Code, Cursor, etc.
+- Complex real-world example app with auth, feed, search, notifications, and settings
+
+---
+
 ## 2.0.0-beta.2 (2025-02-06)
 
 ### Documentation

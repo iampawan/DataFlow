@@ -25,6 +25,8 @@ class TrackedAction {
   final Object? error;
   final StackTrace? stackTrace;
   final String id;
+  final String? storeSnapshot; // Store state at this point in time
+  final DataAction Function()? retryFactory; // Factory to create retry action
 
   TrackedAction({
     required this.actionType,
@@ -33,14 +35,32 @@ class TrackedAction {
     this.duration,
     this.error,
     this.stackTrace,
+    this.storeSnapshot,
+    this.retryFactory,
     String? id,
   }) : id = id ?? '${timestamp.millisecondsSinceEpoch}_$actionType';
+
+  /// Whether this action can be retried/replayed.
+  bool get canRetry =>
+      retryFactory != null &&
+      (status == DataActionStatus.error ||
+          status == DataActionStatus.success ||
+          status == DataActionStatus.cancelled);
+
+  /// Retries this action by creating a new instance.
+  void doRetry() {
+    if (retryFactory != null) {
+      retryFactory!();
+    }
+  }
 
   TrackedAction copyWith({
     DataActionStatus? status,
     Duration? duration,
     Object? error,
     StackTrace? stackTrace,
+    String? storeSnapshot,
+    DataAction Function()? retryFactory,
   }) {
     return TrackedAction(
       actionType: actionType,
@@ -49,6 +69,8 @@ class TrackedAction {
       duration: duration ?? this.duration,
       error: error ?? this.error,
       stackTrace: stackTrace ?? this.stackTrace,
+      storeSnapshot: storeSnapshot ?? this.storeSnapshot,
+      retryFactory: retryFactory ?? this.retryFactory,
       id: id,
     );
   }
@@ -61,6 +83,7 @@ class TrackedAction {
       'timestamp': timestamp.toIso8601String(),
       'duration': duration?.inMilliseconds,
       'error': error?.toString(),
+      'storeSnapshot': storeSnapshot,
     };
   }
 }
@@ -168,27 +191,61 @@ class InspectorTracker {
 
     final actionType = action.runtimeType.toString();
     final now = DateTime.now();
+    // Use hashCode to uniquely identify this action instance
+    final actionInstanceId = action.hashCode.toString();
+
+    // Capture retry factory if action implements RetryableAction
+    DataAction Function()? retryFactory;
+    if (action is RetryableAction) {
+      final retryableAction = action as RetryableAction;
+      retryFactory = () => retryableAction.retry();
+    }
 
     if (action.status == DataActionStatus.loading) {
-      // Action started - add new entry
-      final actionId = '${now.millisecondsSinceEpoch}_${action.hashCode}';
-
-      final tracked = TrackedAction(
-        actionType: actionType,
-        status: action.status,
-        timestamp: now,
-        id: actionId,
+      // Check if we already have a loading entry for this exact action instance
+      // This prevents duplicates when DataFlow.notify() is called multiple times
+      final existingLoadingIndex = _actionHistory.indexWhere(
+        (a) =>
+            a.actionType == actionType &&
+            a.status == DataActionStatus.loading &&
+            a.id.endsWith('_$actionInstanceId'),
       );
-      _addAction(tracked);
+
+      // Only add if we don't already have a loading entry for this action instance
+      if (existingLoadingIndex == -1) {
+        final actionId = '${now.millisecondsSinceEpoch}_$actionInstanceId';
+
+        final tracked = TrackedAction(
+          actionType: actionType,
+          status: action.status,
+          timestamp: now,
+          id: actionId,
+          retryFactory: retryFactory,
+        );
+        _addAction(tracked);
+      }
+      // If already exists, ignore the duplicate loading event
     } else {
       // Action completed (success, error, or cancelled)
-      // Find the LAST loading entry for this action type and update it
+      // Capture store snapshot for time travel debugging
+      String? storeSnapshot;
+      try {
+        final store = DataFlow.getStore();
+        storeSnapshot = store.toString();
+      } catch (_) {
+        // Store might not be available
+      }
+
+      // Find the loading entry for THIS SPECIFIC action instance by matching hashCode
       final existingIndex = _actionHistory.lastIndexWhere(
-        (a) => a.actionType == actionType && a.status == DataActionStatus.loading,
+        (a) =>
+            a.actionType == actionType &&
+            a.status == DataActionStatus.loading &&
+            a.id.endsWith('_$actionInstanceId'),
       );
 
       if (existingIndex != -1) {
-        // Found a loading entry - update it
+        // Found the exact loading entry for this action - update it
         final existing = _actionHistory[existingIndex];
         final duration = now.difference(existing.timestamp);
 
@@ -199,7 +256,9 @@ class InspectorTracker {
           duration: duration,
           error: action.error,
           stackTrace: action.errorStackTrace,
+          storeSnapshot: storeSnapshot,
           id: existing.id,
+          retryFactory: existing.retryFactory ?? retryFactory,
         );
 
         _actionHistory[existingIndex] = tracked;
@@ -208,13 +267,16 @@ class InspectorTracker {
         // Generate insights
         _checkForInsights(tracked);
       } else {
-        // No loading entry found - add as new entry
+        // No matching loading entry found - add as new entry
+        // This can happen if tracking was enabled mid-action
         final tracked = TrackedAction(
           actionType: actionType,
           status: action.status,
           timestamp: now,
           error: action.error,
           stackTrace: action.errorStackTrace,
+          storeSnapshot: storeSnapshot,
+          retryFactory: retryFactory,
         );
         _addAction(tracked);
         _checkForInsights(tracked);

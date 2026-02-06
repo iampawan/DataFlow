@@ -186,3 +186,33 @@ class DataFlowException implements Exception {
   @override
   String toString() => message;
 }
+
+/// Base interface for retryable actions (used for runtime type checking).
+abstract class RetryableAction {
+  /// Creates a new instance of this action with the same parameters for retry.
+  DataAction retry();
+}
+
+/// A mixin that allows an action to be retried.
+///
+/// Implement this mixin in your action classes to enable retry functionality
+/// in the DataFlow Inspector when an action fails.
+///
+/// Example:
+/// ```dart
+/// class LoadPostsAction extends DataAction<AppStore> with Retryable<AppStore> {
+///   final bool refresh;
+///   LoadPostsAction({this.refresh = false});
+///
+///   @override
+///   DataAction<AppStore> retry() => LoadPostsAction(refresh: refresh);
+///
+///   @override
+///   Future<void> execute() async { ... }
+/// }
+/// ```
+mixin Retryable<T extends DataStore> on DataAction<T> implements RetryableAction {
+  /// Creates a new instance of this action with the same parameters for retry.
+  @override
+  DataAction<T> retry();
+}

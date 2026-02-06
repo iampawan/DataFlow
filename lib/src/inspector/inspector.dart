@@ -19,6 +19,7 @@ import 'package:dataflow/src/inspector/tracker.dart';
 import 'package:dataflow/src/inspector/action_timeline.dart';
 import 'package:dataflow/src/inspector/insights_panel.dart';
 import 'package:dataflow/src/inspector/bug_report.dart';
+import 'package:dataflow/src/inspector/time_travel.dart';
 
 /// The main DataFlow Inspector widget.
 ///
@@ -68,12 +69,14 @@ class DataFlowInspectorState extends State<DataFlowInspector> {
   bool _isVisible = false;
   bool _showTimeline = false;
   bool _showInsights = false;
+  bool _showTimeTravel = false;
   bool _showBugReport = false;
   BugReport? _bugReport;
   bool _positionsInitialized = false;
   Offset _buttonPosition = const Offset(16, 100); // Safe default
   Offset _timelinePosition = const Offset(16, 160);
   Offset _insightsPosition = const Offset(16, 400);
+  Offset _timeTravelPosition = const Offset(16, 160);
 
   // TODO: Shake detection requires sensors package - planned for future release
 
@@ -112,18 +115,22 @@ class DataFlowInspectorState extends State<DataFlowInspector> {
           _buttonPosition = const Offset(16, 100);
           _timelinePosition = const Offset(16, 160);
           _insightsPosition = Offset(16, size.height - 400);
+          _timeTravelPosition = Offset(size.width - 366, 160);
         case InspectorButtonPosition.topRight:
           _buttonPosition = Offset(size.width - 70, 100);
           _timelinePosition = Offset(size.width - 366, 160);
           _insightsPosition = Offset(size.width - 336, size.height - 400);
+          _timeTravelPosition = const Offset(16, 160);
         case InspectorButtonPosition.bottomLeft:
           _buttonPosition = Offset(16, size.height - 70);
           _timelinePosition = const Offset(16, 160);
           _insightsPosition = Offset(16, size.height - 450);
+          _timeTravelPosition = Offset(size.width - 366, 160);
         case InspectorButtonPosition.bottomRight:
           _buttonPosition = Offset(size.width - 70, size.height - 70);
           _timelinePosition = Offset(size.width - 366, 160);
           _insightsPosition = Offset(size.width - 336, size.height - 450);
+          _timeTravelPosition = const Offset(16, 160);
       }
       _positionsInitialized = true;
     });
@@ -144,6 +151,7 @@ class DataFlowInspectorState extends State<DataFlowInspector> {
       _isVisible = false;
       _showTimeline = false;
       _showInsights = false;
+      _showTimeTravel = false;
     });
   }
 
@@ -154,6 +162,14 @@ class DataFlowInspectorState extends State<DataFlowInspector> {
     } else {
       show();
     }
+  }
+
+  /// Shows the time travel panel.
+  void showTimeTravel() {
+    if (kReleaseMode) return;
+    setState(() {
+      _showTimeTravel = true;
+    });
   }
 
   /// Shows the bug report dialog.
@@ -298,6 +314,35 @@ class DataFlowInspectorState extends State<DataFlowInspector> {
             onTap: () => setState(() => _showInsights = true),
           ),
         ),
+
+      // Time travel panel
+      if (_showTimeTravel)
+        Positioned(
+          left: _timeTravelPosition.dx,
+          top: _timeTravelPosition.dy,
+          child: GestureDetector(
+            onPanUpdate: (details) {
+              setState(() {
+                _timeTravelPosition += details.delta;
+              });
+            },
+            child: TimeTravelPanel(
+              theme: theme,
+              onClose: () => setState(() => _showTimeTravel = false),
+            ),
+          ),
+        ),
+
+      // Time travel badge (shows when panel is closed)
+      if (!_showTimeTravel && _isVisible)
+        Positioned(
+          right: 16,
+          top: 150,
+          child: _TimeTravelBadge(
+            theme: theme,
+            onTap: () => setState(() => _showTimeTravel = true),
+          ),
+        ),
     ];
   }
 
@@ -340,12 +385,12 @@ class _InspectorFab extends StatelessWidget {
       decoration: BoxDecoration(
         color: isActive
             ? theme.primaryColor
-            : theme.backgroundColor.withOpacity(0.9),
+            : theme.backgroundColor.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(27),
         boxShadow: [
           BoxShadow(
             color: (isActive ? theme.primaryColor : Colors.black)
-                .withOpacity(0.3),
+                .withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -372,7 +417,7 @@ class _InspectorFab extends StatelessWidget {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(27 * value),
                     border: Border.all(
-                      color: theme.primaryColor.withOpacity(0.5 * (1 - value)),
+                      color: theme.primaryColor.withValues(alpha: 0.5 * (1 - value)),
                       width: 2,
                     ),
                   ),
@@ -380,6 +425,56 @@ class _InspectorFab extends StatelessWidget {
               },
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _TimeTravelBadge extends StatelessWidget {
+  final InspectorTheme theme;
+  final VoidCallback onTap;
+
+  const _TimeTravelBadge({
+    required this.theme,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.backgroundColor.withValues(alpha: theme.panelOpacity),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.history,
+              color: theme.primaryColor,
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Time Travel',
+              style: TextStyle(
+                color: theme.textColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -398,6 +493,9 @@ extension InspectorContextExtension on BuildContext {
 
   /// Toggles the inspector.
   void toggleInspector() => inspector?.toggle();
+
+  /// Shows the time travel panel.
+  void showTimeTravel() => inspector?.showTimeTravel();
 
   /// Shows the bug report dialog.
   void showBugReport() => inspector?.showBugReport();

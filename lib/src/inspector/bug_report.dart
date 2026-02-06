@@ -174,6 +174,7 @@ class BugReportDialog extends StatefulWidget {
 class _BugReportDialogState extends State<BugReportDialog>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _showCopiedFeedback = false;
 
   @override
   void initState() {
@@ -402,7 +403,7 @@ class _BugReportDialogState extends State<BugReportDialog>
               color: theme.surfaceColor,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: SelectableText(
+            child: Text(
               state != null
                   ? const JsonEncoder.withIndent('  ').convert(state)
                   : 'No state available',
@@ -430,7 +431,7 @@ class _BugReportDialogState extends State<BugReportDialog>
               color: theme.surfaceColor,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: SelectableText(
+            child: Text(
               const JsonEncoder.withIndent('  ')
                   .convert(widget.report.deviceInfo),
               style: TextStyle(
@@ -447,7 +448,7 @@ class _BugReportDialogState extends State<BugReportDialog>
 
   Widget _buildFooter(InspectorTheme theme) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.surfaceColor,
         borderRadius: BorderRadius.vertical(
@@ -455,24 +456,47 @@ class _BugReportDialogState extends State<BugReportDialog>
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton.icon(
-            onPressed: _copyToClipboard,
-            icon: Icon(Icons.copy, size: 18, color: theme.secondaryTextColor),
-            label: Text(
-              'Copy JSON',
-              style: TextStyle(color: theme.secondaryTextColor),
+          if (_showCopiedFeedback)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.successColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Copied!',
+                style: TextStyle(color: Colors.white, fontSize: 11),
+              ),
+            ),
+          const Spacer(),
+          GestureDetector(
+            onTap: _copyToClipboard,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.copy, size: 16, color: theme.secondaryTextColor),
+                const SizedBox(width: 4),
+                Text(
+                  'Copy',
+                  style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: _share,
-            icon: const Icon(Icons.share, size: 18),
-            label: const Text('Share'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-              foregroundColor: Colors.white,
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: _share,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.primaryColor,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Share',
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
             ),
           ),
         ],
@@ -482,12 +506,10 @@ class _BugReportDialogState extends State<BugReportDialog>
 
   void _copyToClipboard() {
     Clipboard.setData(ClipboardData(text: widget.report.toJson()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Bug report copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    setState(() => _showCopiedFeedback = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _showCopiedFeedback = false);
+    });
   }
 
   void _share() {
