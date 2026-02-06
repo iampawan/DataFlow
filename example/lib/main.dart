@@ -18,8 +18,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = DataFlow.getStore<AppStore>();
-    return MaterialApp(
-      home: store.isLoggedIn ? TodoScreen() : LoginScreen(),
+    // Wrap with DataFlowInspector for visual debugging
+    return DataFlowInspector(
+      child: MaterialApp(
+        home: store.isLoggedIn ? TodoScreen() : LoginScreen(),
+      ),
     );
   }
 }

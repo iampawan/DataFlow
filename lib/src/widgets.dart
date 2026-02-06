@@ -15,6 +15,10 @@
 import 'dart:async';
 
 import 'package:dataflow/src/engine.dart';
+import 'package:dataflow/src/inspector/tracker.dart';
+import 'package:dataflow/src/inspector/pulse_effect.dart';
+import 'package:dataflow/src/inspector/state_popup.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// A widget that builds its descendants based on the state of a [DataStore].
@@ -49,6 +53,7 @@ class DataSync<T extends DataStore> extends StatefulWidget {
     this.actionNotifier,
     this.disableErrorBuilder = false,
     this.disableLoadingBuilder = false,
+    this.enableInspectorPulse = true,
     super.key,
   });
 
@@ -95,6 +100,10 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   /// Whether to disable the loading builder.
   final bool disableLoadingBuilder;
 
+  /// Whether to enable the inspector pulse effect.
+  /// Only works when DataFlowInspector is active (debug mode only).
+  final bool enableInspectorPulse;
+
   @override
   // ignore: library_private_types_in_public_api
   DataSyncState createState() => DataSyncState<T>();
@@ -111,6 +120,10 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   final Map<Type, DataActionStatus> allActionsStatus = {};
   final Map<Type, Object> _allActionsErrors = {};
   final Map<Type, StackTrace> _allActionsStackTraces = {};
+
+  // Inspector integration
+  late final String _inspectorId;
+  DataActionStatus? _lastPulseStatus;
 
   /// Gets the status of the given action type.
   DataActionStatus getStatus(Type actionType) {
@@ -248,7 +261,18 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   @override
   void initState() {
     super.initState();
+    _inspectorId = '${hashCode}_${DateTime.now().millisecondsSinceEpoch}';
     _setupSubscriptions();
+    _registerWithInspector();
+  }
+
+  void _registerWithInspector() {
+    if (kReleaseMode) return;
+    InspectorTracker.instance.registerWidget(
+      _inspectorId,
+      'DataSync<${T.toString()}>',
+      widget.actions,
+    );
   }
 
   @override
@@ -300,6 +324,9 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
 
   @override
   void dispose() {
+    if (!kReleaseMode) {
+      InspectorTracker.instance.unregisterWidget(_inspectorId);
+    }
     allActionsStatus.clear();
     _allActionsErrors.clear();
     _allActionsStackTraces.clear();
@@ -310,32 +337,81 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
 
   @override
   Widget build(BuildContext context) {
+    // Track rebuilds for inspector
+    if (!kReleaseMode) {
+      InspectorTracker.instance.recordRebuild(_inspectorId);
+    }
+
     // Use cached stream instead of creating new one on every build
     return StreamBuilder<DataAction>(
       stream: _cachedStream,
       builder: (context, snapshot) {
+        Widget child;
+
         if (snapshot.hasData) {
+          // Update pulse status
+          _lastPulseStatus = snapshot.data?.status;
+
           if (isAnyActionLoading && !widget.disableLoadingBuilder) {
             if (widget.loadingBuilder != null) {
-              return widget.loadingBuilder!(context);
+              child = widget.loadingBuilder!(context);
+            } else {
+              child = const Center(child: CircularProgressIndicator.adaptive());
             }
-            return const Center(child: CircularProgressIndicator.adaptive());
           } else if (hasAnyActionError && !widget.disableErrorBuilder) {
             final error = firstActionError;
             if (error != null) {
               if (widget.errorBuilder != null) {
-                return widget.errorBuilder!(context, error);
+                child = widget.errorBuilder!(context, error);
+              } else {
+                child = Center(child: Text(error.toString()));
               }
-              return Center(child: Text(error.toString()));
+            } else {
+              final store = DataFlow.getStore() as T;
+              child = widget.builder(context, store, true);
             }
+          } else {
+            final store = DataFlow.getStore() as T;
+            child = widget.builder(context, store, true);
           }
-
-          final store = DataFlow.getStore() as T;
-          return widget.builder(context, store, true);
         } else {
-          return widget.builder(context, DataFlow.getStore() as T, false);
+          child = widget.builder(context, DataFlow.getStore() as T, false);
         }
+
+        // Wrap with pulse effect and long-press detector in debug mode
+        if (!kReleaseMode && widget.enableInspectorPulse) {
+          return GestureDetector(
+            onLongPress: () => _showStatePopup(context),
+            child: PulseEffect(
+              status: _lastPulseStatus,
+              enabled: InspectorTracker.instance.isEnabled,
+              child: child,
+            ),
+          );
+        }
+
+        return child;
       },
+    );
+  }
+
+  void _showStatePopup(BuildContext context) {
+    if (kReleaseMode) return;
+
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final position = renderBox.localToGlobal(Offset.zero);
+    final trackedWidget = InspectorTracker.instance.widgets[_inspectorId];
+
+    showStatePopup(
+      context: context,
+      position: Offset(position.dx + 20, position.dy + 20),
+      widgetName: 'DataSync<${T.toString()}>',
+      store: DataFlow.getStore<T>(),
+      actions: widget.actions,
+      actionStatuses: Map.from(allActionsStatus),
+      trackedWidget: trackedWidget,
     );
   }
 }

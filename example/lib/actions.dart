@@ -49,10 +49,10 @@ class LoginAction extends DataAction<AppStore> {
   }
 
   @override
-  void onException(e, StackTrace s) {
+  void onException(Object e, StackTrace s) {
     error = DataFlowException('Custom error $e');
     caught = true;
-    super.onException(error, s);
+    super.onException(e, s);
   }
 }
 
