@@ -1,3 +1,30 @@
+## 2.0.0-beta.1 (2025-02-06)
+
+### Breaking Changes
+
+See [MIGRATION.md](MIGRATION.md) for detailed upgrade guide.
+
+- **`DataSync.actions` is now required** - Previously nullable, now must be provided
+- **`errorBuilder` signature changed** - Now receives `Object` instead of `Exception`
+- **`DataAction.error` type changed** - Now `Object?` instead of `Exception?`
+- **`areAllActionsSuccessful` behavior changed** - Returns `false` when empty (was `true`)
+- **Loading state always emitted** - Even for synchronous actions
+
+### New Features
+- **Action Cancellation** - Call `action.cancel()` to cancel running actions
+- **New `cancelled` status** - `DataActionStatus.cancelled` for cancelled actions
+- **Stack trace support** - `errorStackTrace` on actions, `getStackTrace()` on state
+- **`isAnyActionCancelled` getter** - Check if any action was cancelled
+- **`firstActionStackTrace` getter** - Get stack trace of first failed action
+- **Await action completion** - Use `action.future` to wait for action to complete
+
+### Performance Improvements
+- **Cached stream** - Stream is now created once in `initState` instead of every `build()`
+
+### Bug Fixes
+- **Catches all error types** - Now catches `Object` (both `Exception` and `Error`)
+- **Post actions cleared on error** - `_postDataActions` cleared when action fails
+
 ## 1.6.0 (2025-02-06)
 
 ### New Features

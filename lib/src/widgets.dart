@@ -19,11 +19,17 @@ import 'package:flutter/material.dart';
 
 /// A widget that builds its descendants based on the state of a [DataStore].
 ///
+/// ## Migration from v1.x:
+/// - `actions` is now required and non-nullable
+/// - `errorBuilder` now receives `Object` instead of `Exception`
+/// - Stream is now cached (performance improvement)
+///
 /// Example:
 /// ```dart
 /// DataSync<MyStore>(
-///   builder: (context, tank) {
-///     //= Build UI based on tank and status
+///   actions: {FetchDataAction}, // Required in v2.0
+///   builder: (context, store, hasActionExecuted) {
+///     // Build UI based on store
 ///   },
 ///   loadingBuilder: (context) {
 ///     return Center(child: CircularProgressIndicator());
@@ -37,7 +43,7 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   /// Creates a new [DataSync] instance.
   const DataSync({
     required this.builder,
-    required this.actions,
+    required this.actions, // Now required in v2.0
     this.loadingBuilder,
     this.errorBuilder,
     this.actionNotifier,
@@ -65,19 +71,23 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   final Widget Function(BuildContext context)? loadingBuilder;
 
   /// A custom builder function for the error state widget.
+  ///
+  /// **v2.0 Change:** Now receives `Object` instead of `Exception` to handle all error types.
+  ///
   /// Example:
   /// ```dart
   /// errorBuilder: (context, error) {
   ///   return Center(child: Text('An error occurred: $error'));
   /// },
   /// ```
-  final Widget Function(BuildContext context, Exception error)? errorBuilder;
+  final Widget Function(BuildContext context, Object error)? errorBuilder;
 
   /// A map of [DataAction] actions to be notified.
   final Map<Type, ContextCallbackWithStatus>? actionNotifier;
 
   /// The actions to listen to.
-  final Set<Type>? actions;
+  /// **v2.0 Change:** Now required and non-nullable.
+  final Set<Type> actions;
 
   /// Whether to disable the error builder.
   final bool disableErrorBuilder;
@@ -90,11 +100,17 @@ class DataSync<T extends DataStore> extends StatefulWidget {
   DataSyncState createState() => DataSyncState<T>();
 }
 
+/// The state for [DataSync] widget.
+///
+/// Provides access to action statuses and errors through various getters and methods.
 class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
-  StreamSubscription<DataAction>? eventSubAct;
-  StreamSubscription<DataAction>? eventSubNot;
+  StreamSubscription<DataAction>? _eventSubAct;
+  StreamSubscription<DataAction>? _eventSubNot;
+  Stream<DataAction>? _cachedStream;
+
   final Map<Type, DataActionStatus> allActionsStatus = {};
-  final Map<Type, Exception> _allActionsErrors = {};
+  final Map<Type, Object> _allActionsErrors = {};
+  final Map<Type, StackTrace> _allActionsStackTraces = {};
 
   /// Gets the status of the given action type.
   DataActionStatus getStatus(Type actionType) {
@@ -130,18 +146,32 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   }
 
   /// Gets the error from the first failed action
-  Exception? get firstActionError {
+  Object? get firstActionError {
     final errorType = whichActionHasError;
     return errorType != null ? _allActionsErrors[errorType] : null;
   }
 
-  // if any action is successful
+  /// Gets the stack trace from the first failed action
+  StackTrace? get firstActionStackTrace {
+    final errorType = whichActionHasError;
+    return errorType != null ? _allActionsStackTraces[errorType] : null;
+  }
+
+  /// if any action is successful
   bool get isAnyActionSuccessful =>
       allActionsStatus.values.any((e) => e == DataActionStatus.success);
 
   /// if all actions are successful
+  ///
+  /// **v2.0 Change:** Returns false if no actions have been tracked yet.
+  /// Previously returned true for empty collection.
   bool get areAllActionsSuccessful =>
+      allActionsStatus.isNotEmpty &&
       allActionsStatus.values.every((e) => e == DataActionStatus.success);
+
+  /// if any action was cancelled
+  bool get isAnyActionCancelled =>
+      allActionsStatus.values.any((e) => e == DataActionStatus.cancelled);
 
   /// which action is successful
   Type? get whichActionIsSuccessful {
@@ -158,6 +188,7 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   void resetStatus(Type actionType) {
     allActionsStatus[actionType] = DataActionStatus.idle;
     _allActionsErrors.remove(actionType);
+    _allActionsStackTraces.remove(actionType);
   }
 
   /// Resets all action statuses to idle and clears all errors.
@@ -166,42 +197,58 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       allActionsStatus[key] = DataActionStatus.idle;
     }
     _allActionsErrors.clear();
+    _allActionsStackTraces.clear();
   }
 
   /// Gets the error for a specific action type, if any.
-  Exception? getError(Type actionType) {
+  Object? getError(Type actionType) {
     return _allActionsErrors[actionType];
+  }
+
+  /// Gets the stack trace for a specific action type, if any.
+  StackTrace? getStackTrace(Type actionType) {
+    return _allActionsStackTraces[actionType];
+  }
+
+  void _setupSubscriptions() {
+    final actions = widget.actions.toSet();
+    _cachedStream = DataFlow.events.where(
+      (e) => actions.contains(e.runtimeType),
+    );
+    _eventSubAct = _cachedStream!.listen(_handleActionEvent);
+
+    if (widget.actionNotifier != null) {
+      final notifierActions = widget.actionNotifier!.keys.toSet();
+      final notifierStream = DataFlow.events.where(
+        (e) => notifierActions.contains(e.runtimeType),
+      );
+      _eventSubNot = notifierStream.listen((e) {
+        final status = e.status;
+        widget.actionNotifier![e.runtimeType]?.call(context, e, status);
+      });
+    }
+  }
+
+  void _handleActionEvent(DataAction e) {
+    final status = e.status;
+    allActionsStatus[e.runtimeType] = status;
+    // Store error when action fails, remove when it succeeds
+    if (status == DataActionStatus.error && e.error != null) {
+      _allActionsErrors[e.runtimeType] = e.error!;
+      if (e.errorStackTrace != null) {
+        _allActionsStackTraces[e.runtimeType] = e.errorStackTrace!;
+      }
+    } else if (status == DataActionStatus.success ||
+        status == DataActionStatus.cancelled) {
+      _allActionsErrors.remove(e.runtimeType);
+      _allActionsStackTraces.remove(e.runtimeType);
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    if (widget.actions != null) {
-      final actions = widget.actions!.toSet();
-      final stream = DataFlow.events.where(
-        (e) => actions.contains(e.runtimeType),
-      );
-      eventSubAct = stream.listen((e) {
-        final status = e.status;
-        allActionsStatus[e.runtimeType] = status;
-        // Store error when action fails, remove when it succeeds
-        if (status == DataActionStatus.error && e.error != null) {
-          _allActionsErrors[e.runtimeType] = e.error!;
-        } else if (status == DataActionStatus.success) {
-          _allActionsErrors.remove(e.runtimeType);
-        }
-      });
-    }
-    if (widget.actionNotifier != null) {
-      final actions = widget.actionNotifier!.keys.toSet();
-      final stream = DataFlow.events.where(
-        (e) => actions.contains(e.runtimeType),
-      );
-      eventSubNot = stream.listen((e) {
-        final status = e.status;
-        widget.actionNotifier![e.runtimeType]?.call(context, e, status);
-      });
-    }
+    _setupSubscriptions();
   }
 
   @override
@@ -211,24 +258,16 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
     // Re-subscribe to actions if they changed
     final actionsChanged = !_setsEqual(widget.actions, oldWidget.actions);
     if (actionsChanged) {
-      eventSubAct?.cancel();
+      _eventSubAct?.cancel();
       allActionsStatus.clear();
       _allActionsErrors.clear();
-      if (widget.actions != null) {
-        final actions = widget.actions!.toSet();
-        final stream = DataFlow.events.where(
-          (e) => actions.contains(e.runtimeType),
-        );
-        eventSubAct = stream.listen((e) {
-          final status = e.status;
-          allActionsStatus[e.runtimeType] = status;
-          if (status == DataActionStatus.error && e.error != null) {
-            _allActionsErrors[e.runtimeType] = e.error!;
-          } else if (status == DataActionStatus.success) {
-            _allActionsErrors.remove(e.runtimeType);
-          }
-        });
-      }
+      _allActionsStackTraces.clear();
+
+      final actions = widget.actions.toSet();
+      _cachedStream = DataFlow.events.where(
+        (e) => actions.contains(e.runtimeType),
+      );
+      _eventSubAct = _cachedStream!.listen(_handleActionEvent);
     }
 
     // Re-subscribe to actionNotifier if keys changed
@@ -237,13 +276,13 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       oldWidget.actionNotifier?.keys.toSet(),
     );
     if (notifierKeysChanged) {
-      eventSubNot?.cancel();
+      _eventSubNot?.cancel();
       if (widget.actionNotifier != null) {
         final actions = widget.actionNotifier!.keys.toSet();
         final stream = DataFlow.events.where(
           (e) => actions.contains(e.runtimeType),
         );
-        eventSubNot = stream.listen((e) {
+        _eventSubNot = stream.listen((e) {
           final status = e.status;
           widget.actionNotifier![e.runtimeType]?.call(context, e, status);
         });
@@ -263,24 +302,17 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   void dispose() {
     allActionsStatus.clear();
     _allActionsErrors.clear();
-    eventSubAct?.cancel();
-    eventSubNot?.cancel();
+    _allActionsStackTraces.clear();
+    _eventSubAct?.cancel();
+    _eventSubNot?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.actions == null) {
-      throw StateError(
-        'DataSync.actions cannot be null. '
-        'Provide a Set of action types to listen to.',
-      );
-    }
-    final stream = DataFlow.events.where(
-      (e) => widget.actions!.contains(e.runtimeType),
-    );
+    // Use cached stream instead of creating new one on every build
     return StreamBuilder<DataAction>(
-      stream: stream,
+      stream: _cachedStream,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           if (isAnyActionLoading && !widget.disableLoadingBuilder) {

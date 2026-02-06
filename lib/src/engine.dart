@@ -51,7 +51,16 @@ enum DataActionStatus {
   /// ```
   /// DataActionStatus status = DataActionStatus.error;
   /// ```
-  error
+  error,
+
+  /// Represents the cancelled state.
+  /// Added in v2.0 for action cancellation support.
+  ///
+  /// Example:
+  /// ```
+  /// DataActionStatus status = DataActionStatus.cancelled;
+  /// ```
+  cancelled,
 }
 
 /// An abstract class representing a DataStore.

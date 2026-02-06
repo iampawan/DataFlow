@@ -18,6 +18,11 @@ part of 'engine.dart';
 typedef DataActionBuilder = DataAction Function();
 
 /// An abstract class representing a DataAction.
+///
+/// ## Migration from v1.x:
+/// - `error` is now `Object?` instead of `Exception?` to catch all error types
+/// - Loading state is now always emitted, even for synchronous actions
+/// - Actions can be cancelled using [cancel]
 abstract class DataAction<T extends DataStore> {
   /// Constructs a new instance of [DataAction].
   ///
@@ -25,11 +30,15 @@ abstract class DataAction<T extends DataStore> {
   /// flow execution.
   DataAction() {
     _status = DataActionStatus.idle;
-    _run();
+    _runFuture = _run();
   }
 
-  /// The error message associated with the DataAction.
-  Exception? error;
+  /// The error associated with the DataAction.
+  /// Changed from Exception? to Object? in v2.0 to catch all error types.
+  Object? error;
+
+  /// The stack trace associated with the error, if any.
+  StackTrace? errorStackTrace;
 
   /// The DataStore associated with this DataAction.
   T get store => DataFlow.getStore<T>();
@@ -37,7 +46,12 @@ abstract class DataAction<T extends DataStore> {
   /// The current status of the DataAction.
   DataActionStatus get status => _status;
 
+  /// Whether this action has been cancelled.
+  bool get isCancelled => _isCancelled;
+
   late DataActionStatus _status;
+  bool _isCancelled = false;
+  Future<void>? _runFuture;
 
   final List<DataActionBuilder> _postDataActions = [];
 
@@ -48,34 +62,73 @@ abstract class DataAction<T extends DataStore> {
       }
     }
 
+    // Always emit loading state first (even for sync actions)
+    _setStatus(DataActionStatus.loading);
+
     try {
+      if (_isCancelled) {
+        _setStatus(DataActionStatus.cancelled);
+        return;
+      }
+
       dynamic result = execute();
       if (result is Future) {
-        _setStatus(DataActionStatus.loading);
         result = await result;
       }
+
+      if (_isCancelled) {
+        _setStatus(DataActionStatus.cancelled);
+        return;
+      }
+
       _setStatus(DataActionStatus.success);
+
       if (result != null && this is DataChain) {
         final dynamic out = (this as DataChain).fork(result);
         if (out is Future) {
           await out;
         }
-        _setStatus(DataActionStatus.success);
+        if (!_isCancelled) {
+          _setStatus(DataActionStatus.success);
+        }
       }
 
-      for (final dataAction in _postDataActions) {
-        dataAction();
+      // Only execute post actions if not cancelled
+      if (!_isCancelled) {
+        for (final dataAction in _postDataActions) {
+          dataAction();
+        }
       }
-    } on Exception catch (e, s) {
+    } on Object catch (e, s) {
+      // Catch Object to handle both Exception and Error types
       error = e;
+      errorStackTrace = s;
       onException(e, s);
       _setStatus(DataActionStatus.error);
+      // Clear post actions on error to prevent unexpected behavior
+      _postDataActions.clear();
     }
 
     for (final i in DataFlow._middlewares) {
       i.postDataAction(this);
     }
   }
+
+  /// Cancels this action if it's still running.
+  ///
+  /// Note: This sets a flag that will be checked at various points during
+  /// execution. It does not forcibly stop an in-progress async operation.
+  void cancel() {
+    if (_status == DataActionStatus.loading) {
+      _isCancelled = true;
+      _setStatus(DataActionStatus.cancelled);
+    }
+  }
+
+  /// Waits for this action to complete.
+  ///
+  /// Returns a Future that completes when the action finishes (success, error, or cancelled).
+  Future<void> get future => _runFuture ?? Future.value();
 
   /// Moves to the next DataAction in the DataAction.
   ///
@@ -88,13 +141,17 @@ abstract class DataAction<T extends DataStore> {
   dynamic execute();
 
   /// Handles the exception that occurs during the execution of the DataAction.
-  void onException(dynamic e, StackTrace s) {
+  ///
+  /// Override this method to customize error handling behavior.
+  void onException(Object e, StackTrace s) {
     var isAssertOn = false;
     assert(isAssertOn = true);
     if (isAssertOn) {
       dev.log(
         e.toString(),
         name: '$runtimeType',
+        error: e,
+        stackTrace: s,
       );
     }
   }
@@ -117,10 +174,10 @@ abstract class DataMiddleware {
   bool preDataAction(DataAction dataAction);
 
   /// A function that is called after the execution of a DataAction.
-
   void postDataAction(DataAction dataAction);
 }
 
+/// An exception class for DataFlow-specific errors.
 class DataFlowException implements Exception {
   DataFlowException(this.message);
 
