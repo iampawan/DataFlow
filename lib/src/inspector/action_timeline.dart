@@ -83,11 +83,11 @@ class _ActionTimelineState extends State<ActionTimeline> {
           maxHeight: _isExpanded ? 400 : 50,
         ),
         decoration: BoxDecoration(
-          color: theme.backgroundColor.withOpacity(theme.panelOpacity),
+          color: theme.backgroundColor.withValues(alpha:theme.panelOpacity),
           borderRadius: BorderRadius.circular(theme.borderRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha:0.3),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -148,7 +148,7 @@ class _ActionTimelineState extends State<ActionTimeline> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(0.2),
+                color: theme.primaryColor.withValues(alpha:0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -288,7 +288,7 @@ class _FilterChip extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? theme.primaryColor
-                : theme.secondaryTextColor.withOpacity(0.3),
+                : theme.secondaryTextColor.withValues(alpha:0.3),
           ),
         ),
         child: Text(
@@ -541,11 +541,11 @@ class _ActionBadgeState extends State<ActionBadge> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: theme.backgroundColor.withOpacity(theme.panelOpacity),
+          color: theme.backgroundColor.withValues(alpha:theme.panelOpacity),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha:0.2),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),

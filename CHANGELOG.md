@@ -1,3 +1,10 @@
+## 2.0.0-beta.5 (2025-02-06)
+
+### Bug Fixes
+- Fixed deprecated `withOpacity` warnings by migrating to `withValues(alpha:)`
+
+---
+
 ## 2.0.0-beta.4 (2025-02-06)
 
 ### New Features - DataFlow Inspector 🔍

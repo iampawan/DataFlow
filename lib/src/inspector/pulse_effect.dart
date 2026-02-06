@@ -115,7 +115,7 @@ class _PulseEffectState extends State<PulseEffect>
             boxShadow: _animation.value > 0
                 ? [
                     BoxShadow(
-                      color: _pulseColor.withOpacity(0.6 * _animation.value),
+                      color: _pulseColor.withValues(alpha:0.6 * _animation.value),
                       blurRadius: 20 * _animation.value,
                       spreadRadius: 5 * _animation.value,
                     ),
@@ -200,14 +200,14 @@ class _GlowingBorderState extends State<GlowingBorder>
             borderRadius: BorderRadius.circular(8),
             border: widget.isGlowing
                 ? Border.all(
-                    color: widget.glowColor.withOpacity(0.3 + 0.4 * _animation.value),
+                    color: widget.glowColor.withValues(alpha:0.3 + 0.4 * _animation.value),
                     width: 2,
                   )
                 : null,
             boxShadow: widget.isGlowing
                 ? [
                     BoxShadow(
-                      color: widget.glowColor.withOpacity(0.3 * _animation.value),
+                      color: widget.glowColor.withValues(alpha:0.3 * _animation.value),
                       blurRadius: widget.glowRadius * _animation.value,
                       spreadRadius: 2 * _animation.value,
                     ),
