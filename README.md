@@ -44,7 +44,7 @@ To start using DataFlow in your Flutter project, follow these steps:
 
 ```dart
 dependencies:
-  dataflow: ^1.4.0
+  dataflow: ^1.5.0
 ```
 
 2. Import the package in your Dart code:
@@ -290,6 +290,109 @@ class ErrorHandlingMiddleware extends DataMiddleware {
       // Handle the error here
       print('Error: ${dataAction.error}');
     }
+  }
+}
+```
+
+## Advanced DataSyncState Features
+
+### Resetting Action Status
+
+You can reset the status of specific actions or all actions using the `DataSyncState` methods. This is useful when you want to retry an action or clear error states.
+
+```dart
+DataSync<MyStore>(
+  actions: {FetchDataAction, SaveDataAction},
+  builder: (context, store, hasData) {
+    final dataSyncState = context.dataSync<MyStore>();
+
+    return Column(
+      children: [
+        if (dataSyncState.hasAnyActionError)
+          ElevatedButton(
+            onPressed: () {
+              // Reset a specific action's status
+              dataSyncState.resetStatus(FetchDataAction);
+              // Then retry
+              FetchDataAction();
+            },
+            child: Text('Retry Fetch'),
+          ),
+        ElevatedButton(
+          onPressed: () {
+            // Reset all action statuses
+            dataSyncState.resetAllStatuses();
+          },
+          child: Text('Clear All Errors'),
+        ),
+      ],
+    );
+  },
+)
+```
+
+### Getting Errors for Specific Actions
+
+When handling multiple actions, you can get the error for a specific action type:
+
+```dart
+DataSync<MyStore>(
+  actions: {FetchUsersAction, FetchPostsAction},
+  disableErrorBuilder: true, // Handle errors manually
+  builder: (context, store, hasData) {
+    final dataSyncState = context.dataSync<MyStore>();
+
+    // Get error for a specific action
+    final usersError = dataSyncState.getError(FetchUsersAction);
+    final postsError = dataSyncState.getError(FetchPostsAction);
+
+    return Column(
+      children: [
+        if (usersError != null)
+          Text('Users failed: $usersError'),
+        if (postsError != null)
+          Text('Posts failed: $postsError'),
+        // Your UI here
+      ],
+    );
+  },
+)
+```
+
+### Dynamic Actions
+
+DataSync now properly handles changes to the `actions` set. When the actions change, it automatically re-subscribes to the new action types:
+
+```dart
+class MyWidget extends StatefulWidget {
+  @override
+  State<MyWidget> createState() => _MyWidgetState();
+}
+
+class _MyWidgetState extends State<MyWidget> {
+  bool showAdvanced = false;
+
+  Set<Type> get currentActions => showAdvanced
+      ? {FetchDataAction, FetchAdvancedDataAction}
+      : {FetchDataAction};
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Switch(
+          value: showAdvanced,
+          onChanged: (value) => setState(() => showAdvanced = value),
+        ),
+        DataSync<MyStore>(
+          // Actions can change dynamically - DataSync will re-subscribe automatically
+          actions: currentActions,
+          builder: (context, store, hasData) {
+            return Text('Data loaded');
+          },
+        ),
+      ],
+    );
   }
 }
 ```

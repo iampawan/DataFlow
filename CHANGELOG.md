@@ -1,3 +1,10 @@
+## 1.5.1 (2025-02-06)
+
+### Documentation
+- Added examples for `resetStatus()`, `resetAllStatuses()`, and `getError()` methods
+- Added example for dynamic actions with `didUpdateWidget`
+- Updated package version in README
+
 ## 1.5.0 (2025-02-06)
 
 ### Bug Fixes
