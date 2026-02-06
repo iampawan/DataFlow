@@ -397,6 +397,67 @@ class _MyWidgetState extends State<MyWidget> {
 }
 ```
 
+### Safe DataSync Access
+
+Use `tryDataSync` when you're not sure if a DataSync ancestor exists:
+
+```dart
+Widget build(BuildContext context) {
+  // Returns null if no DataSync ancestor found (instead of throwing)
+  final dataSyncState = context.tryDataSync<MyStore>();
+
+  if (dataSyncState != null) {
+    // Safe to use dataSyncState
+    if (dataSyncState.isAnyActionLoading) {
+      return CircularProgressIndicator();
+    }
+  }
+
+  return MyWidget();
+}
+```
+
+## DataFlow Lifecycle Management
+
+### Resetting DataFlow
+
+Use `reset` when you need to fully reinitialize DataFlow, such as during logout:
+
+```dart
+void logout() {
+  // Clear user data and reinitialize with fresh store
+  DataFlow.reset(
+    MyDataStore(), // Fresh store instance
+    middlewares: [LoggingMiddleware()],
+  );
+
+  // Navigate to login screen
+  Navigator.of(context).pushReplacementNamed('/login');
+}
+```
+
+### Managing Middlewares
+
+You can dynamically add and remove middlewares:
+
+```dart
+// Add middleware
+final debugMiddleware = DebugMiddleware();
+DataFlow.addMiddleware(debugMiddleware);
+
+// Remove specific middleware
+DataFlow.removeMiddleware(debugMiddleware);
+
+// Clear all middlewares
+DataFlow.clearMiddlewares();
+
+// Check if DataFlow was disposed
+if (DataFlow.isDisposed) {
+  // Need to call reset() before using again
+  DataFlow.reset(MyStore());
+}
+```
+
 ## Best Practices
 
 Here are some best practices to follow when using DataFlow:

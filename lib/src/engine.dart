@@ -61,7 +61,8 @@ abstract class DataStore {}
 class DataFlow {
   DataFlow._();
 
-  static final _controller = BehaviorSubject<DataAction<DataStore>>();
+  static BehaviorSubject<DataAction<DataStore>> _controller =
+      BehaviorSubject<DataAction<DataStore>>();
   static final _middlewares = <DataMiddleware>[];
 
   /// The store/storage for this engine.
@@ -69,6 +70,9 @@ class DataFlow {
 
   /// The events of this engine.
   static Stream<DataAction<DataStore>> get events => _controller.stream;
+
+  /// Whether the DataFlow has been disposed.
+  static bool get isDisposed => _controller.isClosed;
 
   /// Filters the main event stream with the action
   /// given as parameter. This can be used to perform some callbacks inside
@@ -78,6 +82,9 @@ class DataFlow {
   }
 
   /// Initializes the engine with the given store and middlewares.
+  ///
+  /// Note: Calling init multiple times will replace the store and
+  /// add to existing middlewares. Use [reset] to fully reinitialize.
   static void init<T extends DataStore>(
     T store, {
     List<DataMiddleware>? middlewares,
@@ -86,6 +93,39 @@ class DataFlow {
     if (middlewares != null) {
       _middlewares.addAll(middlewares);
     }
+  }
+
+  /// Resets the DataFlow to its initial state.
+  ///
+  /// This clears the store, all middlewares, and creates a new controller.
+  /// Use this when you need to fully reinitialize DataFlow (e.g., on logout).
+  static void reset<T extends DataStore>(
+    T store, {
+    List<DataMiddleware>? middlewares,
+  }) {
+    // Close existing controller if not already closed
+    if (!_controller.isClosed) {
+      _controller.close();
+    }
+    // Create new controller
+    _controller = BehaviorSubject<DataAction<DataStore>>();
+    // Clear middlewares
+    _middlewares.clear();
+    // Initialize with new store
+    _store = store;
+    if (middlewares != null) {
+      _middlewares.addAll(middlewares);
+    }
+  }
+
+  /// Removes a specific middleware from this engine.
+  static void removeMiddleware(DataMiddleware middleware) {
+    _middlewares.remove(middleware);
+  }
+
+  /// Clears all middlewares from this engine.
+  static void clearMiddlewares() {
+    _middlewares.clear();
   }
 
   /// Gets the store of the given type.

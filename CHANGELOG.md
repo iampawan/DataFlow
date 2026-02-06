@@ -1,3 +1,17 @@
+## 1.6.0 (2025-02-06)
+
+### New Features
+- Added `DataFlow.reset()` method for full reinitialization (useful for logout scenarios)
+- Added `DataFlow.removeMiddleware()` method to remove specific middleware
+- Added `DataFlow.clearMiddlewares()` method to clear all middlewares
+- Added `DataFlow.isDisposed` getter to check if DataFlow has been disposed
+- Added `context.tryDataSync<T>()` method that returns null instead of throwing
+
+### Improvements
+- Better error messages when `DataSync.actions` is null
+- Better error messages when `context.dataSync()` has no ancestor
+- Controller is now recoverable after `dispose()` using `reset()`
+
 ## 1.5.1 (2025-02-06)
 
 ### Documentation

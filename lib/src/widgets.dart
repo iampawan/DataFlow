@@ -270,6 +270,12 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.actions == null) {
+      throw StateError(
+        'DataSync.actions cannot be null. '
+        'Provide a Set of action types to listen to.',
+      );
+    }
     final stream = DataFlow.events.where(
       (e) => widget.actions!.contains(e.runtimeType),
     );
@@ -389,8 +395,22 @@ class _DataSyncNotifierState extends State<DataSyncNotifier> {
 
 extension DataFlowContextExtension on BuildContext {
   /// Gets the access to state class of DataSync.
+  /// Throws if no DataSync ancestor is found.
   DataSyncState<T> dataSync<T extends DataStore>() {
-    return findAncestorStateOfType<DataSyncState<T>>()!;
+    final state = findAncestorStateOfType<DataSyncState<T>>();
+    if (state == null) {
+      throw StateError(
+        'No DataSync<$T> ancestor found. '
+        'Make sure this context is a descendant of DataSync<$T>.',
+      );
+    }
+    return state;
+  }
+
+  /// Gets the access to state class of DataSync, or null if not found.
+  /// Use this when you're not sure if a DataSync ancestor exists.
+  DataSyncState<T>? tryDataSync<T extends DataStore>() {
+    return findAncestorStateOfType<DataSyncState<T>>();
   }
 
   /// Gets the store of the current [DataFlow].
