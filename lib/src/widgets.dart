@@ -94,6 +94,7 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   StreamSubscription<DataAction>? eventSubAct;
   StreamSubscription<DataAction>? eventSubNot;
   final Map<Type, DataActionStatus> allActionsStatus = {};
+  final Map<Type, Exception> _allActionsErrors = {};
 
   /// Gets the status of the given action type.
   DataActionStatus getStatus(Type actionType) {
@@ -128,6 +129,12 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
     return null;
   }
 
+  /// Gets the error from the first failed action
+  Exception? get firstActionError {
+    final errorType = whichActionHasError;
+    return errorType != null ? _allActionsErrors[errorType] : null;
+  }
+
   // if any action is successful
   bool get isAnyActionSuccessful =>
       allActionsStatus.values.any((e) => e == DataActionStatus.success);
@@ -146,6 +153,26 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
     return null;
   }
 
+  /// Resets the status of a specific action type to idle.
+  /// Also clears any stored error for that action.
+  void resetStatus(Type actionType) {
+    allActionsStatus[actionType] = DataActionStatus.idle;
+    _allActionsErrors.remove(actionType);
+  }
+
+  /// Resets all action statuses to idle and clears all errors.
+  void resetAllStatuses() {
+    for (final key in allActionsStatus.keys) {
+      allActionsStatus[key] = DataActionStatus.idle;
+    }
+    _allActionsErrors.clear();
+  }
+
+  /// Gets the error for a specific action type, if any.
+  Exception? getError(Type actionType) {
+    return _allActionsErrors[actionType];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -157,6 +184,12 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
       eventSubAct = stream.listen((e) {
         final status = e.status;
         allActionsStatus[e.runtimeType] = status;
+        // Store error when action fails, remove when it succeeds
+        if (status == DataActionStatus.error && e.error != null) {
+          _allActionsErrors[e.runtimeType] = e.error!;
+        } else if (status == DataActionStatus.success) {
+          _allActionsErrors.remove(e.runtimeType);
+        }
       });
     }
     if (widget.actionNotifier != null) {
@@ -172,8 +205,64 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
   }
 
   @override
+  void didUpdateWidget(covariant DataSync<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Re-subscribe to actions if they changed
+    final actionsChanged = !_setsEqual(widget.actions, oldWidget.actions);
+    if (actionsChanged) {
+      eventSubAct?.cancel();
+      allActionsStatus.clear();
+      _allActionsErrors.clear();
+      if (widget.actions != null) {
+        final actions = widget.actions!.toSet();
+        final stream = DataFlow.events.where(
+          (e) => actions.contains(e.runtimeType),
+        );
+        eventSubAct = stream.listen((e) {
+          final status = e.status;
+          allActionsStatus[e.runtimeType] = status;
+          if (status == DataActionStatus.error && e.error != null) {
+            _allActionsErrors[e.runtimeType] = e.error!;
+          } else if (status == DataActionStatus.success) {
+            _allActionsErrors.remove(e.runtimeType);
+          }
+        });
+      }
+    }
+
+    // Re-subscribe to actionNotifier if keys changed
+    final notifierKeysChanged = !_setsEqual(
+      widget.actionNotifier?.keys.toSet(),
+      oldWidget.actionNotifier?.keys.toSet(),
+    );
+    if (notifierKeysChanged) {
+      eventSubNot?.cancel();
+      if (widget.actionNotifier != null) {
+        final actions = widget.actionNotifier!.keys.toSet();
+        final stream = DataFlow.events.where(
+          (e) => actions.contains(e.runtimeType),
+        );
+        eventSubNot = stream.listen((e) {
+          final status = e.status;
+          widget.actionNotifier![e.runtimeType]?.call(context, e, status);
+        });
+      }
+    }
+  }
+
+  /// Helper to compare two sets for equality.
+  bool _setsEqual(Set<Type>? a, Set<Type>? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    return a.containsAll(b);
+  }
+
+  @override
   void dispose() {
     allActionsStatus.clear();
+    _allActionsErrors.clear();
     eventSubAct?.cancel();
     eventSubNot?.cancel();
     super.dispose();
@@ -194,10 +283,13 @@ class DataSyncState<T extends DataStore> extends State<DataSync<T>> {
             }
             return const Center(child: CircularProgressIndicator.adaptive());
           } else if (hasAnyActionError && !widget.disableErrorBuilder) {
-            if (widget.errorBuilder != null) {
-              return widget.errorBuilder!(context, snapshot.data!.error!);
+            final error = firstActionError;
+            if (error != null) {
+              if (widget.errorBuilder != null) {
+                return widget.errorBuilder!(context, error);
+              }
+              return Center(child: Text(error.toString()));
             }
-            return Center(child: Text(snapshot.data!.error.toString()));
           }
 
           final store = DataFlow.getStore() as T;
@@ -251,6 +343,10 @@ class _DataSyncNotifierState extends State<DataSyncNotifier> {
   @override
   void initState() {
     super.initState();
+    _subscribeToActions();
+  }
+
+  void _subscribeToActions() {
     final actions = widget.actions.keys.toSet();
     final stream = DataFlow.events.where(
       (e) => actions.contains(e.runtimeType),
@@ -259,6 +355,24 @@ class _DataSyncNotifierState extends State<DataSyncNotifier> {
       final status = e.status;
       widget.actions[e.runtimeType]?.call(context, e, status);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant DataSyncNotifier oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Re-subscribe if action keys changed
+    final oldKeys = oldWidget.actions.keys.toSet();
+    final newKeys = widget.actions.keys.toSet();
+    if (!_setsEqual(oldKeys, newKeys)) {
+      eventSub?.cancel();
+      _subscribeToActions();
+    }
+  }
+
+  bool _setsEqual(Set<Type> a, Set<Type> b) {
+    if (a.length != b.length) return false;
+    return a.containsAll(b);
   }
 
   @override

@@ -1,3 +1,20 @@
+## 1.5.0 (2025-02-06)
+
+### Bug Fixes
+- Fixed null error in DataSync when multiple actions are triggered and one fails while another succeeds
+- Error handling now properly tracks errors per action type instead of relying on stream snapshot
+
+### New Features
+- Added `resetStatus(Type actionType)` method to reset a specific action's status to idle
+- Added `resetAllStatuses()` method to reset all action statuses to idle
+- Added `getError(Type actionType)` method to get the error for a specific action type
+- Added `didUpdateWidget` handler to DataSync - now properly re-subscribes when actions change
+- Added `didUpdateWidget` handler to DataSyncNotifier - now properly re-subscribes when actions change
+
+### Internal Improvements
+- Errors are now stored in a separate `_allActionsErrors` map for reliable error retrieval
+- Added `firstActionError` getter that returns the error from the first failed action
+
 ## 1.4.0 (2024-10-14)
 
 - DataSyncWidget improved with more simplicity and better error control
