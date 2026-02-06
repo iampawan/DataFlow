@@ -1,3 +1,19 @@
+## 2.0.0-beta.2 (2025-02-06)
+
+### Documentation
+- Complete rewrite of README with comprehensive documentation
+- Added table of contents for easy navigation
+- Added "Why DataFlow?" section with design principles
+- Step-by-step Quick Start guide
+- Detailed Core Concepts explanations
+- Three complete guides: Todo App, Authentication Flow, Pagination
+- Advanced Features section: Middleware, Chaining, Cancellation, Reset
+- Comparison table with Bloc, Provider, Riverpod, GetX
+- Complete API Reference tables
+- Best Practices section with code examples
+- FAQ section
+- Migration guide reference
+
 ## 2.0.0-beta.1 (2025-02-06)
 
 ### Breaking Changes

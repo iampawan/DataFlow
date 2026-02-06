@@ -59,7 +59,7 @@ DataFlow was designed with these principles in mind:
 
 ```yaml
 dependencies:
-  dataflow: ^2.0.0-beta.1
+  dataflow: ^2.0.0-beta.2
 ```
 
 ### Step 2: Create Your Store
